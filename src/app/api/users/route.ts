@@ -1,0 +1,49 @@
+import { NextRequest, NextResponse } from "next/server";
+import { connectDB } from "@/app/libs/mongodb";
+import User from "@/app/models/User";
+
+export async function GET(req: NextRequest) {
+  await connectDB();
+
+  const searchParams = req.nextUrl.searchParams;
+  const id = searchParams.get("id");
+  const role = searchParams.get("role");
+
+  try {
+    if (id) {
+      const user = await User.findById(id);
+      if (!user) {
+        return NextResponse.json({ error: "User not found" }, { status: 404 });
+      }
+      return NextResponse.json(user);
+    }
+
+    const filter: any = {};
+    if (role) filter.role = role;
+
+    const users = await User.find(filter);
+    return NextResponse.json(users);
+  } catch (error) {
+    console.error("Error fetching user(s):", error);
+    return NextResponse.json({ error: "Failed to fetch user(s)" }, { status: 500 });
+  }
+}
+
+
+export async function POST(req: NextRequest) {
+  await connectDB();
+
+  try {
+    const data = await req.json();
+    const existingUser = await User.findOne({ email: data.email });
+    if (existingUser) {
+      return NextResponse.json({ error: "User already exists" }, { status: 400 });
+    }
+
+    const user = await User.create(data);
+    return NextResponse.json(user, { status: 201 });
+  } catch (error) {
+    console.error("Error creating user:", error);
+    return NextResponse.json({ error: "Failed to create user" }, { status: 500 });
+  }
+}
