@@ -7,7 +7,6 @@ const testSchema = new mongoose.Schema({
   tags: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Tag' }],
   author: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   questions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Question' }],
-  createdAt: { type: Date, default: Date.now },
   imageUrl: { type: String }
 }, {
   timestamps: true,});

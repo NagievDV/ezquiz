@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
 import { connectDB } from "@/app/libs/mongodb";
 import User from "@/app/models/User";
+
 
 export async function GET(req: NextRequest) {
   await connectDB();
@@ -34,13 +36,16 @@ export async function POST(req: NextRequest) {
   await connectDB();
 
   try {
-    const data = await req.json();
+    const { passwordHash, ...data } = await req.json();
+    
+    const hashedPassword = await bcrypt.hash(passwordHash, 10);
+    
     const existingUser = await User.findOne({ email: data.email });
     if (existingUser) {
       return NextResponse.json({ error: "User already exists" }, { status: 400 });
     }
 
-    const user = await User.create(data);
+    const user = await User.create({ ...data, passwordHash: hashedPassword });
     return NextResponse.json(user, { status: 201 });
   } catch (error) {
     console.error("Error creating user:", error);
