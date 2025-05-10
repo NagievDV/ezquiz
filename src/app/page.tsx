@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import NavBar from "./components/NavBar";
-import TestCard from "./components/TestCard";
+import NavBar from "@/components/NavBar";
+import TestCard from "@/components/TestCard";
 
 interface Test {
   _id: string;
@@ -24,14 +24,21 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
   const [tags, setTags] = useState<Tag[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     async function fetchData() {
       try {
+        setIsLoading(true);
         const [testsRes, tagsRes] = await Promise.all([
           fetch("/api/tests"),
           fetch("/api/tags"),
         ]);
+
+        if (!testsRes.ok || !tagsRes.ok) {
+          throw new Error("Ошибка загрузки данных");
+        }
 
         const [testsData, tagsData] = await Promise.all([
           testsRes.json(),
@@ -41,8 +48,11 @@ export default function Home() {
         setTests(testsData);
         setFilteredTests(testsData);
         setTags(tagsData);
-      } catch (error) {
-        console.error("Ошибка загрузки данных:", error);
+      } catch (err) {
+        setError("Не удалось загрузить тесты");
+        console.error(err);
+      } finally {
+        setIsLoading(false);
       }
     }
     fetchData();
@@ -63,11 +73,7 @@ export default function Home() {
 
     if (selectedTags.length > 0) {
       filtered = filtered.filter((test) =>
-        test.tags.some((tag) =>
-          typeof tag === "string"
-            ? selectedTags.includes(tag)
-            : selectedTags.includes(tag._id)
-        )
+        test.tags.some((tag) => selectedTags.includes(tag._id))
       );
     }
 
@@ -82,13 +88,29 @@ export default function Home() {
     );
   };
 
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-400 dark:bg-gray-900">
+        <div className="text-red-500 text-xl">{error}</div>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-400 dark:bg-gray-900">
+        <div className="text-white text-xl">Загрузка...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-gray-400 w-full min-h-screen dark:bg-gray-900 overflow-x-hidden">
       <div className="mx-auto p-4 max-w-[1400px]">
         <NavBar
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
-          handleSearch={applyFilters}
+          handleSearch={() => applyFilters()}
         />
 
         <div className="p-4 flex justify-center">
@@ -98,13 +120,12 @@ export default function Home() {
                 key={tag._id}
                 onClick={() => handleTagClick(tag._id)}
                 className={`px-3 py-1 rounded-full text-sm capitalize transition-colors
-          ${
-            selectedTags.includes(tag._id)
-              ? "bg-blue-600 text-white"
-              : "bg-gray-200 text-black dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white"
-          }
-        `}
-                style={{ maxWidth: "fit-content" }}
+                  ${
+                    selectedTags.includes(tag._id)
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-200 text-black dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white"
+                  }
+                `}
               >
                 {tag.name}
               </button>
@@ -116,6 +137,7 @@ export default function Home() {
           {filteredTests.map((test) => (
             <TestCard
               key={test._id}
+              testId={test._id}
               title={test.title}
               description={test.description}
               imageUrl={test.imageUrl}
@@ -124,6 +146,12 @@ export default function Home() {
             />
           ))}
         </div>
+
+        {filteredTests.length === 0 && (
+          <div className="text-center text-white text-xl mt-8">
+            Ничего не найдено
+          </div>
+        )}
       </div>
     </div>
   );
