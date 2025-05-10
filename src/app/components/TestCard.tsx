@@ -1,7 +1,4 @@
-<<<<<<< HEAD
-=======
 import Link from "next/link";
->>>>>>> saved-state
 import { CgAlbum } from "react-icons/cg";
 
 interface Tag {
@@ -19,10 +16,7 @@ interface TestCardProps {
 }
 
 export default function TestCard({
-<<<<<<< HEAD
-=======
   testId,
->>>>>>> saved-state
   title,
   description,
   imageUrl,
@@ -72,14 +66,10 @@ export default function TestCard({
         <span className="text-gray-600 dark:text-gray-400 text-sm">
           {new Date(updatedAt).toLocaleDateString()}
         </span>
-<<<<<<< HEAD
-        <button className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 text-white px-4 py-2 rounded-lg transition-colors">
-=======
         <Link
           href={`/test/${testId}`}
           className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 text-white px-4 py-2 rounded-lg transition-colors"
         >
->>>>>>> saved-state
           Пройти
         </Link>
       </div>
