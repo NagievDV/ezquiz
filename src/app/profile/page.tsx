@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "@/context/AuthContext";
 import Link from "next/link";
 import { IoPersonSharp, IoLogOutOutline } from "react-icons/io5";
 import { useRouter } from "next/navigation";
@@ -22,7 +22,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (user?.role === "student") {
-      fetch(`/api/users/stats?userId=${user.id}`)
+      fetch(`/api/users/stats?userId=${user._id}`)
         .then((res) => {
           if (!res.ok) throw new Error("Ошибка загрузки статистики");
           return res.json();

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { connectDB } from "@/app/libs/mongodb";
-import UserAnswer from "@/app/models/UserAnswer";
+import { connectDB } from "@/libs/mongodb";
+import UserAnswer from "@/models/UserAnswer";
 import mongoose from "mongoose";
 
 export async function GET(req: NextRequest) {

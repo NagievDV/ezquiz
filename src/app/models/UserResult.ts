@@ -10,5 +10,5 @@ const userResultSchema = new mongoose.Schema({
     timeSpent: { type: Number }
   });
   
-  export default mongoose.models.UserResult || mongoose.model('UserResult', userResultSchema);
-  
+export default mongoose.models.UserResult || mongoose.model('UserResult', userResultSchema);
+export type UserResultDocument = mongoose.HydratedDocumentFromSchema<typeof userResultSchema>;  

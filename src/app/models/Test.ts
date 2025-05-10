@@ -11,5 +11,6 @@ const testSchema = new mongoose.Schema({
 }, {
   timestamps: true,});
 
+export type TestDocument = mongoose.HydratedDocumentFromSchema<typeof testSchema>;
 export default mongoose.models.Test || mongoose.model('Test', testSchema);
 

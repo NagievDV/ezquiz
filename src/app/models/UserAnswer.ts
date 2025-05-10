@@ -7,6 +7,6 @@ const userAnswerSchema = new mongoose.Schema({
     isCorrect: { type: Boolean },
     earnedPoints: { type: Number }
   });
-  
-  export default mongoose.models.UserAnswer || mongoose.model('UserAnswer', userAnswerSchema);
-  
+
+export default mongoose.models.UserAnswer || mongoose.model('UserAnswer', userAnswerSchema);
+export type UserAnswerDocument = mongoose.HydratedDocumentFromSchema<typeof userAnswerSchema>;  

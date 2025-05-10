@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { connectDB } from "../../../libs/mongodb";
-import UserResult from "../../../models/UserResult";
+import { connectDB } from "@/libs/mongodb";
+import UserResult from "@/models/UserResult";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);

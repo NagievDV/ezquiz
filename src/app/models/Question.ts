@@ -18,5 +18,6 @@ const questionSchema = new mongoose.Schema({
     order: [String]
   });
   
-  export default mongoose.models.Question || mongoose.model('Question', questionSchema);
+export type QuestionDocument = mongoose.HydratedDocumentFromSchema<typeof questionSchema>;
+export default mongoose.models.Question || mongoose.model('Question', questionSchema);
   
