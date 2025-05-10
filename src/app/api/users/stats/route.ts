@@ -1,11 +1,6 @@
 import { NextResponse } from "next/server";
-<<<<<<< HEAD
-import { connectDB } from "../../../libs/mongodb";
-import UserResult from "../../../models/UserResult";
-=======
 import { connectDB } from "@/libs/mongodb";
 import UserResult from "@/models/UserResult";
->>>>>>> saved-state
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);

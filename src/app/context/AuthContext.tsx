@@ -97,7 +97,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         isLoading,
       }}
     >
->>>>>>> saved-state
       {children}
     </AuthContext.Provider>
   );

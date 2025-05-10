@@ -1,14 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-<<<<<<< HEAD
-import { connectDB } from "@/app/libs/mongodb";
-import User from "@/app/models/User";
-=======
 import { connectDB } from "@/libs/mongodb";
 import User from "@/models/User";
-
->>>>>>> saved-state
-
 
 export async function GET(req: NextRequest) {
   await connectDB();

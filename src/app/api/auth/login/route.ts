@@ -1,14 +1,8 @@
 // src/app/api/auth/login/route.ts
 import { NextResponse } from "next/server";
-<<<<<<< HEAD
-import User from "../../../models/User";
-import bcrypt from "bcryptjs";
-import { connectDB } from "../../../libs/mongodb";
-=======
 import User from "@/models/User";
 import bcrypt from "bcryptjs";
 import { connectDB } from "@/libs/mongodb";
->>>>>>> saved-state
 
 // Обработчик POST-запросов
 export async function POST(request: Request) {
