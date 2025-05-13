@@ -3,8 +3,9 @@ import QuestionRenderer from "./QuestionRenderer";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useState } from "react";
 
-interface QuizTestProps {
+interface StepByStepTestProps {
   testId: string;
   questions: QuestionDocument[];
   answers: Record<string, string | string[] | Record<string, string>>;
@@ -14,15 +15,16 @@ interface QuizTestProps {
   onSubmit: (result: { score: number; maxScore: number }) => void;
 }
 
-export default function QuizTest({
+export default function StepByStepTest({
   testId,
   questions,
   answers,
   onAnswersUpdate,
   onSubmit,
-}: QuizTestProps) {
+}: StepByStepTestProps) {
   const { user } = useAuth();
   const router = useRouter();
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
 
   const handleSubmit = async () => {
     const maxScore = questions.reduce((acc, q) => acc + q.points, 0);
@@ -94,25 +96,69 @@ export default function QuizTest({
     }
   };
 
+  const currentQuestion = questions[currentQuestionIndex];
+  const isLastQuestion = currentQuestionIndex === questions.length - 1;
+  const hasAnswer = answers[currentQuestion._id.toString()];
+
+  const handleNext = () => {
+    if (hasAnswer) {
+      setCurrentQuestionIndex((prev) => prev + 1);
+    } else {
+      alert("Пожалуйста, выберите ответ перед тем как продолжить");
+    }
+  };
+
   return (
     <div className="space-y-6 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
-      {questions.map((question) => (
-        <QuestionRenderer
-          key={question._id.toString()}
-          question={question}
-          answer={answers[question._id.toString()] || ""}
-          onAnswerChange={(value) =>
-            onAnswersUpdate({ ...answers, [question._id.toString()]: value })
-          }
-        />
-      ))}
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-lg font-medium text-gray-800 dark:text-gray-200">
+          Вопрос {currentQuestionIndex + 1} из {questions.length}
+        </h3>
+        <div className="text-sm text-gray-600 dark:text-gray-400">
+          {Math.round(((currentQuestionIndex + 1) / questions.length) * 100)}%
+        </div>
+      </div>
 
-      <button
-        onClick={handleSubmit}
-        className="w-full py-3 px-6 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 text-white rounded-lg transition-colors font-medium text-lg cursor-pointer"
-      >
-        Отправить ответы
-      </button>
+      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 mb-6">
+        <div
+          className="bg-blue-600 dark:bg-blue-500 h-2.5 rounded-full transition-all duration-300"
+          style={{
+            width: `${((currentQuestionIndex + 1) / questions.length) * 100}%`,
+          }}
+        ></div>
+      </div>
+
+      <QuestionRenderer
+        key={currentQuestion._id.toString()}
+        question={currentQuestion}
+        answer={answers[currentQuestion._id.toString()] || ""}
+        onAnswerChange={(value) =>
+          onAnswersUpdate({
+            ...answers,
+            [currentQuestion._id.toString()]: value,
+          })
+        }
+      />
+
+      <div className="flex justify-end gap-4 mt-6">
+        {isLastQuestion ? (
+          <button
+            onClick={handleSubmit}
+            disabled={!hasAnswer}
+            className="py-3 px-6 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 text-white rounded-lg transition-colors font-medium text-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Завершить тест
+          </button>
+        ) : (
+          <button
+            onClick={handleNext}
+            disabled={!hasAnswer}
+            className="py-3 px-6 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 text-white rounded-lg transition-colors font-medium text-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Следующий вопрос
+          </button>
+        )}
+      </div>
 
       {!user && (
         <div className="mt-4 text-center text-sm">

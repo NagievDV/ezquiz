@@ -3,12 +3,14 @@ import { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import Test, { TestDocument } from "@/models/Test";
 import QuizTest from "@/components/Test/QuizTest";
+import StepByStepTest from "@/components/Test/StepByStepTest";
 import { QuestionDocument } from "@/models/Question";
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 import Link from "next/link";
 
 type PopulatedTestDocument = Omit<TestDocument, "questions"> & {
   questions: QuestionDocument[];
+  type: "quiz" | "test";
 };
 
 export default function TestPage({
@@ -17,7 +19,9 @@ export default function TestPage({
   params: Promise<{ id: string }>;
 }) {
   const [test, setTest] = useState<PopulatedTestDocument | null>(null);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [answers, setAnswers] = useState<
+    Record<string, string | string[] | Record<string, string>>
+  >({});
   const [result, setResult] = useState<{
     score: number;
     maxScore: number;
@@ -42,6 +46,8 @@ export default function TestPage({
 
   if (!test) return <div className="text-center p-8">Загрузка теста...</div>;
 
+  const TestComponent = test.type === "quiz" ? QuizTest : StepByStepTest;
+
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
       <div className="max-w-3xl mx-auto p-4">
@@ -50,7 +56,7 @@ export default function TestPage({
             <h1 className="text-2xl font-bold mb-6 dark:text-white">
               {test.title}
             </h1>
-            <QuizTest
+            <TestComponent
               testId={id}
               questions={test.questions}
               answers={answers}

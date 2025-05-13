@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { CgAlbum } from "react-icons/cg";
+import Image from "next/image";
+import { useState } from "react";
 
 interface Tag {
   _id: string;
@@ -15,6 +17,12 @@ interface TestCardProps {
   tags?: Tag[];
 }
 
+const PlaceholderImage = () => (
+  <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-700">
+    <CgAlbum className="text-gray-400 dark:text-gray-500 text-6xl" />
+  </div>
+);
+
 export default function TestCard({
   testId,
   title,
@@ -23,20 +31,31 @@ export default function TestCard({
   updatedAt,
   tags = [],
 }: TestCardProps) {
+  const [imageError, setImageError] = useState(false);
+
+  // Оптимизируем URL изображения для Cloudinary
+  const optimizedImageUrl =
+    imageUrl && !imageError
+      ? imageUrl.replace("/upload/", "/upload/c_fill,w_800,h_400/")
+      : null;
+
   return (
     <div className="w-full rounded-xl overflow-hidden shadow-lg bg-white dark:bg-gray-800 h-full flex flex-col justify-between transition-transform hover:scale-105">
       <div className="relative h-48">
-        {imageUrl ? (
-          <img
-            className="w-full h-full object-cover"
-            src={imageUrl}
+        {optimizedImageUrl ? (
+          <Image
+            src={optimizedImageUrl}
             alt={title}
+            fill
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            priority={false}
+            style={{ objectFit: "cover" }}
+            onError={() => setImageError(true)}
             loading="lazy"
+            className="w-full h-full transition-opacity duration-300 hover:opacity-90"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-700">
-            <CgAlbum className="text-gray-400 dark:text-gray-500 text-6xl" />
-          </div>
+          <PlaceholderImage />
         )}
       </div>
 

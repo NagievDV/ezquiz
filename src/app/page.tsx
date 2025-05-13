@@ -10,7 +10,7 @@ interface Test {
   description: string;
   imageUrl: string;
   updatedAt: string;
-  tags: Tag[];
+  tags: string[];
 }
 
 interface Tag {
@@ -26,6 +26,11 @@ export default function Home() {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+
+  // Создаем функцию для получения информации о теге по его ID
+  const getTagInfo = (tagId: string): Tag | undefined => {
+    return tags.find((tag) => tag._id === tagId);
+  };
 
   useEffect(() => {
     async function fetchData() {
@@ -59,26 +64,28 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    const applyFilters = () => {
+      let filtered = [...tests];
+
+      if (searchQuery.trim()) {
+        filtered = filtered.filter((test) =>
+          test.title.toLowerCase().includes(searchQuery.toLowerCase().trim())
+        );
+      }
+
+      if (selectedTags.length > 0) {
+        filtered = filtered.filter((test) =>
+          selectedTags.every((selectedTagId) =>
+            test.tags.includes(selectedTagId)
+          )
+        );
+      }
+
+      setFilteredTests(filtered);
+    };
+
     applyFilters();
   }, [searchQuery, selectedTags, tests]);
-
-  const applyFilters = () => {
-    let filtered = [...tests];
-
-    if (searchQuery) {
-      filtered = filtered.filter((test) =>
-        test.title.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
-
-    if (selectedTags.length > 0) {
-      filtered = filtered.filter((test) =>
-        test.tags.some((tag) => selectedTags.includes(tag._id))
-      );
-    }
-
-    setFilteredTests(filtered);
-  };
 
   const handleTagClick = (tagId: string) => {
     setSelectedTags((prev) =>
@@ -106,13 +113,9 @@ export default function Home() {
 
   return (
     <div className="bg-gray-400 w-full min-h-screen dark:bg-gray-900 overflow-x-hidden">
-      <div className="mx-auto p-4 max-w-[1400px]">
-        <NavBar
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          handleSearch={() => applyFilters()}
-        />
+      <NavBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
 
+      <div className="mx-auto p-4 max-w-[1400px] mt-16 sm:mt-20">
         <div className="p-4 flex justify-center">
           <div className="flex flex-wrap gap-2 justify-center">
             {tags.map((tag) => (
@@ -142,7 +145,9 @@ export default function Home() {
               description={test.description}
               imageUrl={test.imageUrl}
               updatedAt={test.updatedAt}
-              tags={test.tags}
+              tags={test.tags
+                .map((tagId) => getTagInfo(tagId))
+                .filter((tag): tag is Tag => tag !== undefined)}
             />
           ))}
         </div>

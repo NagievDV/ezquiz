@@ -9,7 +9,7 @@ import {
 } from "react";
 
 type UserData = {
-  _id: string;
+  id: string;
   name: string;
   email: string;
   role: string;
@@ -39,7 +39,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const validateUserData = (data: any): data is UserData => {
     return (
       data &&
-      (data._id || data.id) && // Принимаем и _id и id
+      data.id && // Теперь проверяем только id
       data.name &&
       data.email &&
       data.role
@@ -54,7 +54,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const parsed = JSON.parse(savedUser);
         if (validateUserData(parsed)) {
           setUser({
-            _id: parsed._id || parsed._id,
+            id: parsed.id,
             name: parsed.name,
             email: parsed.email,
             role: parsed.role,
@@ -71,14 +71,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   // 3. Гарантированное сохранение при логине
   const login = useCallback((rawData: any) => {
     const userData = {
-      _id: rawData._id || rawData.id,
+      id: rawData.id || rawData._id, // Поддерживаем оба варианта при входе, но сохраняем как id
       name: rawData.name,
       email: rawData.email,
       role: rawData.role,
     };
 
     setUser(userData);
-    localStorage.setItem("user", JSON.stringify(userData)); // Фиксим строку
+    localStorage.setItem("user", JSON.stringify(userData));
   }, []);
 
   // 4. Гарантированная очистка при логауте
