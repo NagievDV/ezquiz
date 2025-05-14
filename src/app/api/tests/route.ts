@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/libs/mongodb";
 import Test from "@/models/Test";
+import Question from "@/models/Question";
 
 export async function GET(req: NextRequest) {
   await connectDB();
@@ -13,6 +14,8 @@ export async function GET(req: NextRequest) {
   const dateFrom = searchParams.get("dateFrom");
   const dateTo = searchParams.get("dateTo");
   const tags = searchParams.getAll("tags");
+  const page = parseInt(searchParams.get("page") || "1");
+  const perPage = parseInt(searchParams.get("perPage") || "5");
 
   const filter: any = {};
 
@@ -37,13 +40,30 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const tests = await Test.find(filter);
-    return NextResponse.json(tests);
+    const skip = (page - 1) * perPage;
+    const [tests, total] = await Promise.all([
+      Test.find(filter).sort({ updatedAt: -1 }).skip(skip).limit(perPage),
+      Test.countDocuments(filter)
+    ]);
+
+    const totalPages = Math.ceil(total / perPage);
+
+    return NextResponse.json({
+      results: tests,
+      pagination: {
+        total,
+        pages: totalPages,
+        currentPage: page,
+        perPage
+      }
+    });
   } catch (error) {
-    console.error("❌ Ошибка при создании теста:", error);
-    return NextResponse.json({ error: "Ошибка при создании теста", details: error }, { status: 500 });
+    console.error("❌ Ошибка при получении тестов:", error);
+    return NextResponse.json(
+      { error: "Ошибка при получении тестов", details: error },
+      { status: 500 }
+    );
   }
-  
 }
 
 export async function POST(req: NextRequest) {
@@ -51,11 +71,50 @@ export async function POST(req: NextRequest) {
 
   try {
     const data = await req.json();
-    const newTest = await Test.create(data);
-    return NextResponse.json(newTest, { status: 201 });
+    const { title, description, type, tags, author, questions, imageUrl } = data;
+
+    // Validate required fields
+    if (!title || !description || !type || !author) {
+      return NextResponse.json(
+        { error: "Отсутствуют обязательные поля" },
+        { status: 400 }
+      );
+    }
+
+    // First, create all questions
+    const questionIds = [];
+    if (questions && Array.isArray(questions)) {
+      for (const question of questions) {
+        const newQuestion = await Question.create(question);
+        questionIds.push(newQuestion._id);
+      }
+    }
+
+    // Create the test with question IDs
+    const testData = {
+      title,
+      description,
+      type,
+      tags,
+      author,
+      questions: questionIds,
+      imageUrl,
+    };
+
+    const newTest = await Test.create(testData);
+    const populatedTest = await Test.findById(newTest._id).populate({
+      path: "questions",
+      model: Question,
+      select: "-createdAt -updatedAt -__v"
+    });
+
+    return NextResponse.json(populatedTest, { status: 201 });
   } catch (error) {
     console.error("Error creating test:", error);
-    return NextResponse.json({ error: "Failed to create test" }, { status: 500 });
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Failed to create test" },
+      { status: 500 }
+    );
   }
 }
 

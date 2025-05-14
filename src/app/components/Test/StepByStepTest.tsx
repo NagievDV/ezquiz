@@ -4,6 +4,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
+import { FiArrowLeft } from "react-icons/fi";
 
 interface StepByStepTestProps {
   testId: string;
@@ -110,10 +111,14 @@ export default function StepByStepTest({
 
   return (
     <div className="space-y-6 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-medium text-gray-800 dark:text-gray-200">
-          Вопрос {currentQuestionIndex + 1} из {questions.length}
-        </h3>
+      <div className="flex justify-between items-center mb-6">
+        <button
+          onClick={() => router.push("/")}
+          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors"
+        >
+          <FiArrowLeft className="h-5 w-5" />
+          <span>На главную</span>
+        </button>
         <div className="text-sm text-gray-600 dark:text-gray-400">
           {Math.round(((currentQuestionIndex + 1) / questions.length) * 100)}%
         </div>

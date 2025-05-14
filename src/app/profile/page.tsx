@@ -5,7 +5,8 @@ import Link from "next/link";
 import { IoPersonSharp, IoLogOutOutline } from "react-icons/io5";
 import { TbRefresh } from "react-icons/tb";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import TestCard from "@/components/TestCard";
 
 interface TestResult {
   _id: string;
@@ -19,6 +20,21 @@ interface TestResult {
   score: number;
   maxScore: number;
   submittedAt: string;
+}
+
+interface Tag {
+  _id: string;
+  name: string;
+}
+
+interface Test {
+  _id: string;
+  title: string;
+  description: string;
+  imageUrl: string;
+  updatedAt: string;
+  tags: Tag[];
+  type: "quiz" | "test";
 }
 
 interface PaginationData {
@@ -37,7 +53,9 @@ export default function ProfilePage() {
     isLoading: true,
   });
   const [testHistory, setTestHistory] = useState<TestResult[]>([]);
+  const [authorTests, setAuthorTests] = useState<Test[]>([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(true);
+  const [isAuthorTestsLoading, setIsAuthorTestsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pagination, setPagination] = useState<PaginationData>({
     total: 0,
@@ -45,64 +63,111 @@ export default function ProfilePage() {
     currentPage: 1,
     perPage: 5,
   });
+  const [authorTestsPagination, setAuthorTestsPagination] =
+    useState<PaginationData>({
+      total: 0,
+      pages: 1,
+      currentPage: 1,
+      perPage: 6,
+    });
+  const [tests, setTests] = useState<Test[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const handleLogout = () => {
     logout();
     router.push("/");
   };
 
-  const loadTestHistory = async (page: number) => {
-    if (!user) return;
+  const loadAuthorTests = useCallback(
+    async (page: number = 1) => {
+      if (!user) return;
 
-    setIsHistoryLoading(true);
-    setError(null);
-
-    try {
-      console.log("📤 Calling API with userId:", user.id);
-      const apiUrl = `/api/users/results?userId=${user.id}&page=${page}`;
-      const res = await fetch(apiUrl);
-      const data = await res.json();
-
-      console.log("📥 API Response:", { status: res.status, data });
-
-      if (!res.ok) {
-        console.error("❌ Failed to load test history:", {
-          status: res.status,
-          data,
-        });
-        throw new Error(
-          data?.error ||
-            data?.details ||
-            res.statusText ||
-            "Ошибка загрузки истории тестов"
-        );
-      }
-
-      if (!data || !Array.isArray(data.results)) {
-        console.error("❌ Invalid response format:", data);
-        throw new Error("Неверный формат данных от сервера");
-      }
-
-      setTestHistory(data.results);
-      setPagination(
-        data.pagination || {
-          total: data.results.length,
-          pages: 1,
-          currentPage: 1,
-          perPage: 5,
-        }
-      );
+      setIsAuthorTestsLoading(true);
       setError(null);
-    } catch (error) {
-      console.error("❌ Error in loadTestHistory:", error);
-      setError(
-        error instanceof Error ? error.message : "Произошла неизвестная ошибка"
-      );
-      setTestHistory([]);
-    } finally {
-      setIsHistoryLoading(false);
-    }
-  };
+
+      try {
+        const res = await fetch(
+          `/api/tests?author=${user.id}&page=${page}&perPage=${authorTestsPagination.perPage}`
+        );
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data?.error || "Ошибка загрузки тестов");
+        }
+
+        setAuthorTests(data.results);
+        setAuthorTestsPagination(data.pagination);
+      } catch (error) {
+        console.error("❌ Error loading author tests:", error);
+        setError(
+          error instanceof Error
+            ? error.message
+            : "Произошла неизвестная ошибка"
+        );
+      } finally {
+        setIsAuthorTestsLoading(false);
+      }
+    },
+    [user, authorTestsPagination.perPage]
+  );
+
+  const loadTestHistory = useCallback(
+    async (page: number) => {
+      if (!user) return;
+
+      setIsHistoryLoading(true);
+      setError(null);
+
+      try {
+        console.log("📤 Calling API with userId:", user.id);
+        const apiUrl = `/api/users/results?userId=${user.id}&page=${page}`;
+        const res = await fetch(apiUrl);
+        const data = await res.json();
+
+        console.log("📥 API Response:", { status: res.status, data });
+
+        if (!res.ok) {
+          console.error("❌ Failed to load test history:", {
+            status: res.status,
+            data,
+          });
+          throw new Error(
+            data?.error ||
+              data?.details ||
+              res.statusText ||
+              "Ошибка загрузки истории тестов"
+          );
+        }
+
+        if (!data || !Array.isArray(data.results)) {
+          console.error("❌ Invalid response format:", data);
+          throw new Error("Неверный формат данных от сервера");
+        }
+
+        setTestHistory(data.results);
+        setPagination(
+          data.pagination || {
+            total: data.results.length,
+            pages: 1,
+            currentPage: 1,
+            perPage: 5,
+          }
+        );
+        setError(null);
+      } catch (error) {
+        console.error("❌ Error in loadTestHistory:", error);
+        setError(
+          error instanceof Error
+            ? error.message
+            : "Произошла неизвестная ошибка"
+        );
+        setTestHistory([]);
+      } finally {
+        setIsHistoryLoading(false);
+      }
+    },
+    [user]
+  );
 
   useEffect(() => {
     if (!user) return;
@@ -122,26 +187,157 @@ export default function ProfilePage() {
           averageScore: Math.round(statsData.averageScore * 100),
           isLoading: false,
         });
+
+        // Загрузка данных в зависимости от роли
+        if (user.role === "teacher") {
+          await loadAuthorTests(1);
+        } else {
+          await loadTestHistory(1);
+        }
       } catch (error) {
         console.error("❌ Error loading stats:", error);
         setStats((prev) => ({ ...prev, isLoading: false }));
       }
-
-      // Загрузка истории тестов
-      await loadTestHistory(1);
     };
 
     loadData();
-  }, [user]);
+  }, [user, loadAuthorTests, loadTestHistory]);
 
   const handlePageChange = (page: number) => {
     loadTestHistory(page);
+  };
+
+  const handleAuthorPageChange = (page: number) => {
+    loadAuthorTests(page);
+  };
+
+  const handleDeleteTest = (deletedTestId: string) => {
+    setAuthorTests((prevTests) =>
+      prevTests.filter((test) => test._id !== deletedTestId)
+    );
+    router.refresh();
   };
 
   const roleTranslations = {
     student: "Студент",
     admin: "Администратор",
     teacher: "Преподаватель",
+  };
+
+  const renderPagination = (
+    currentPage: number,
+    totalPages: number,
+    onPageChange: (page: number) => void
+  ) => {
+    const renderPageButton = (pageNum: number) => (
+      <button
+        key={pageNum}
+        onClick={() => onPageChange(pageNum)}
+        className={`min-w-[28px] sm:min-w-[32px] h-[28px] sm:h-[32px] px-2 sm:px-3 text-sm sm:text-base rounded flex items-center justify-center ${
+          currentPage === pageNum
+            ? "bg-blue-600 text-white"
+            : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
+        }`}
+      >
+        {pageNum}
+      </button>
+    );
+
+    const pages = [];
+    const maxVisiblePages = window.innerWidth < 640 ? 3 : 5;
+
+    // Всегда показываем первую страницу
+    pages.push(renderPageButton(1));
+
+    if (totalPages <= maxVisiblePages) {
+      // Если страниц мало, показываем все
+      for (let i = 2; i <= totalPages; i++) {
+        pages.push(renderPageButton(i));
+      }
+    } else {
+      // Вычисляем диапазон видимых страниц
+      let startPage = Math.max(
+        2,
+        currentPage - Math.floor(maxVisiblePages / 2)
+      );
+      let endPage = Math.min(
+        totalPages - 1,
+        currentPage + Math.floor(maxVisiblePages / 2)
+      );
+
+      // Корректируем диапазон, если текущая страница близка к краям
+      if (currentPage <= Math.floor(maxVisiblePages / 2) + 1) {
+        endPage = maxVisiblePages - 1;
+      } else if (currentPage >= totalPages - Math.floor(maxVisiblePages / 2)) {
+        startPage = totalPages - (maxVisiblePages - 2);
+      }
+
+      // Добавляем троеточие в начале, если нужно
+      if (startPage > 2) {
+        pages.push(
+          <span
+            key="ellipsis-start"
+            className="px-1 sm:px-2 text-sm sm:text-base text-gray-600 dark:text-gray-400 flex items-center"
+          >
+            ...
+          </span>
+        );
+      }
+
+      // Добавляем страницы из диапазона
+      for (let i = startPage; i <= endPage; i++) {
+        pages.push(renderPageButton(i));
+      }
+
+      // Добавляем троеточие в конце, если нужно
+      if (endPage < totalPages - 1) {
+        pages.push(
+          <span
+            key="ellipsis-end"
+            className="px-1 sm:px-2 text-sm sm:text-base text-gray-600 dark:text-gray-400 flex items-center"
+          >
+            ...
+          </span>
+        );
+      }
+
+      // Всегда показываем последнюю страницу
+      if (totalPages > 1) {
+        pages.push(renderPageButton(totalPages));
+      }
+    }
+
+    return (
+      <div className="flex justify-center items-center gap-1 mt-6 flex-wrap">
+        {/* Кнопка "Назад" */}
+        <button
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={currentPage === 1}
+          className={`min-w-[28px] sm:min-w-[32px] h-[28px] sm:h-[32px] px-2 sm:px-3 text-sm sm:text-base rounded flex items-center justify-center ${
+            currentPage === 1
+              ? "bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-600 cursor-not-allowed"
+              : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
+          }`}
+        >
+          ←
+        </button>
+
+        {pages}
+
+        {/* Кнопка "Вперед" */}
+        <button
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={currentPage === totalPages}
+          className={`min-w-[28px] sm:min-w-[32px] h-[28px] sm:h-[32px] px-2 sm:px-3 text-sm sm:text-base rounded flex items-center justify-center ${
+            currentPage === totalPages
+              ? "bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-600 cursor-not-allowed"
+              : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
+          }`}
+        >
+          →
+        </button>
+      </div>
+    );
   };
 
   if (!user) {
@@ -161,6 +357,144 @@ export default function ProfilePage() {
       </div>
     );
   }
+
+  const renderContent = () => {
+    if (user.role === "teacher") {
+      if (isAuthorTestsLoading) {
+        return (
+          <div className="text-center text-gray-600 dark:text-gray-400">
+            Загрузка тестов...
+          </div>
+        );
+      }
+
+      return (
+        <div>
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-200">
+              Мои тесты
+            </h3>
+            <Link
+              href="/create-test"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Создать тест
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {authorTests.map((test) => (
+              <TestCard
+                key={test._id}
+                testId={test._id}
+                title={test.title}
+                description={test.description}
+                imageUrl={test.imageUrl}
+                updatedAt={test.updatedAt}
+                type={test.type}
+                tags={test.tags}
+                isTeacher={true}
+                onDelete={() => handleDeleteTest(test._id)}
+              />
+            ))}
+          </div>
+
+          {authorTests.length === 0 && (
+            <div className="text-center text-gray-600 dark:text-gray-400 mt-4">
+              У вас пока нет созданных тестов
+            </div>
+          )}
+
+          {authorTestsPagination.pages > 1 &&
+            renderPagination(
+              authorTestsPagination.currentPage,
+              authorTestsPagination.pages,
+              handleAuthorPageChange
+            )}
+        </div>
+      );
+    }
+
+    // Контент для студента (история тестов)
+    return (
+      <div>
+        <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">
+          История тестов
+        </h3>
+
+        {isHistoryLoading ? (
+          <div className="text-center text-gray-600 dark:text-gray-400">
+            Загрузка истории...
+          </div>
+        ) : (
+          <>
+            {testHistory.map((result) => {
+              const percentage = Math.round(
+                (result.score / result.maxScore) * 100
+              );
+              const date = new Date(result.submittedAt);
+              return (
+                <div
+                  key={result._id}
+                  className="bg-white dark:bg-gray-700 p-4 rounded-lg mb-4 shadow-sm"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="flex-1">
+                      <h4 className="font-medium text-gray-800 dark:text-gray-200">
+                        {result.test.title}
+                      </h4>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        Автор: {result.test.author.name}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Пройден: {date.toLocaleDateString()} в{" "}
+                        {date.toLocaleTimeString()}
+                      </p>
+                    </div>
+                    <div className="flex flex-col items-center min-w-[100px]">
+                      <div className="text-2xl font-bold text-gray-800 dark:text-gray-200">
+                        {percentage}%
+                      </div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                        {result.score}/{result.maxScore}
+                      </div>
+                      <div
+                        className={`h-1.5 w-full mt-2 rounded-full ${
+                          percentage >= 80
+                            ? "bg-green-500"
+                            : percentage >= 60
+                            ? "bg-yellow-500"
+                            : "bg-red-500"
+                        }`}
+                      >
+                        <div
+                          className="h-full rounded-full bg-opacity-20 dark:bg-opacity-40 bg-white"
+                          style={{ width: `${100 - percentage}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+
+            {testHistory.length === 0 && (
+              <div className="text-center text-gray-600 dark:text-gray-400">
+                История пуста
+              </div>
+            )}
+
+            {pagination.pages > 1 &&
+              renderPagination(
+                pagination.currentPage,
+                pagination.pages,
+                handlePageChange
+              )}
+          </>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gray-400 dark:bg-gray-900 px-4 py-6 sm:p-8 transition-colors">
@@ -197,180 +531,35 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          <div className="bg-gray-100 dark:bg-gray-700 p-4 sm:p-6 rounded-lg mb-6">
-            <h3 className="text-base sm:text-lg font-medium text-gray-800 dark:text-gray-200 mb-4">
-              Статистика
-            </h3>
-            {stats.isLoading ? (
-              <div className="animate-pulse grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="h-20 bg-gray-300 dark:bg-gray-600 rounded-lg"></div>
-                <div className="h-20 bg-gray-300 dark:bg-gray-600 rounded-lg"></div>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-                  <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
-                    Пройдено тестов
-                  </p>
-                  <p className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-gray-200">
-                    {stats.totalTests}
-                  </p>
-                </div>
-                <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-                  <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
-                    Средний результат
-                  </p>
-                  <p className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-gray-200">
-                    {stats.averageScore}%
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="bg-gray-100 dark:bg-gray-700 p-4 sm:p-6 rounded-lg mb-6">
-            <h3 className="text-base sm:text-lg font-medium text-gray-800 dark:text-gray-200 mb-4">
-              История тестов
-            </h3>
-
-            {error && (
-              <div className="mb-4 p-3 sm:p-4 bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-200 rounded-lg text-sm sm:text-base">
-                <p>{error}</p>
-                <button
-                  onClick={() => loadTestHistory(pagination.currentPage)}
-                  className="mt-2 text-xs sm:text-sm text-red-600 dark:text-red-400 hover:underline"
-                >
-                  Попробовать снова
-                </button>
-              </div>
-            )}
-
-            {isHistoryLoading ? (
-              <div className="animate-pulse space-y-4">
-                {[1, 2, 3].map((i) => (
-                  <div
-                    key={i}
-                    className="h-16 bg-gray-300 dark:bg-gray-600 rounded-lg"
-                  />
-                ))}
-              </div>
-            ) : testHistory.length > 0 ? (
-              <>
-                <div className="space-y-4">
-                  {testHistory.map((result) => (
-                    <div
-                      key={result._id}
-                      className="bg-white dark:bg-gray-800 p-3 sm:p-4 rounded-lg shadow flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4"
-                    >
-                      <div className="flex-1">
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                          <h4 className="font-medium text-gray-800 dark:text-gray-200 text-sm sm:text-base">
-                            {result.test.title}
-                          </h4>
-                          <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
-                            от {result.test.author.name}
-                          </span>
-                        </div>
-                        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">
-                          Пройден:{" "}
-                          {new Date(result.submittedAt).toLocaleDateString()} в{" "}
-                          {new Date(result.submittedAt).toLocaleTimeString()}
-                        </p>
-                      </div>
-                      <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-3 sm:gap-4">
-                        <div className="text-right">
-                          <p className="text-base sm:text-lg font-bold text-gray-800 dark:text-gray-200">
-                            {Math.round((result.score / result.maxScore) * 100)}
-                            %
-                          </p>
-                          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-                            {result.score} из {result.maxScore}
-                          </p>
-                        </div>
-                        <Link
-                          href={`/test/${result.test._id}`}
-                          className="group relative p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
-                          title="Пройти заново"
-                        >
-                          <TbRefresh className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400 group-hover:rotate-180 transition-transform duration-300" />
-                          <span className="sr-only">Пройти заново</span>
-                          <div className="absolute invisible group-hover:visible opacity-0 group-hover:opacity-100 bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap transition-all duration-200">
-                            Пройти заново
-                          </div>
-                        </Link>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {pagination.pages > 1 && (
-                  <div className="flex justify-center gap-1 sm:gap-2 mt-6 flex-wrap">
-                    {(() => {
-                      const showPages = [];
-                      const totalPages = pagination.pages;
-                      const current = pagination.currentPage;
-
-                      // Always show first page
-                      if (totalPages > 0) showPages.push(1);
-
-                      // Calculate range around current page
-                      let start = Math.max(2, current - 1);
-                      let end = Math.min(totalPages - 1, current + 1);
-
-                      // Adjust range if at the edges
-                      if (current <= 3) {
-                        end = Math.min(4, totalPages - 1);
-                      } else if (current >= totalPages - 2) {
-                        start = Math.max(totalPages - 3, 2);
-                      }
-
-                      // Add ellipsis and pages
-                      if (start > 2) showPages.push("...");
-                      for (let i = start; i <= end; i++) {
-                        showPages.push(i);
-                      }
-                      if (end < totalPages - 1) showPages.push("...");
-
-                      // Always show last page if there is more than one page
-                      if (totalPages > 1) showPages.push(totalPages);
-
-                      return showPages.map((page, index) =>
-                        page === "..." ? (
-                          <span
-                            key={`ellipsis-${index}`}
-                            className="px-2 sm:px-3 py-1 text-gray-500 dark:text-gray-400"
-                          >
-                            ...
-                          </span>
-                        ) : (
-                          <button
-                            key={page}
-                            onClick={() => handlePageChange(page as number)}
-                            className={`min-w-[32px] sm:min-w-[40px] px-2 sm:px-3 py-1 rounded text-sm sm:text-base ${
-                              page === pagination.currentPage
-                                ? "bg-blue-600 text-white"
-                                : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
-                            }`}
-                          >
-                            {page}
-                          </button>
-                        )
-                      );
-                    })()}
+          {user.role !== "teacher" && (
+            <div className="bg-gray-100 dark:bg-gray-700 p-4 sm:p-6 rounded-lg mb-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="text-center">
+                  <div className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-gray-200">
+                    {stats.isLoading ? "-" : stats.totalTests}
                   </div>
-                )}
-              </>
-            ) : (
-              <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 text-center">
-                {error ? "Не удалось загрузить историю" : "История пуста"}
-              </p>
-            )}
-          </div>
+                  <div className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1">
+                    Пройдено тестов
+                  </div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-gray-200">
+                    {stats.isLoading ? "-" : `${stats.averageScore}%`}
+                  </div>
+                  <div className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1">
+                    Средний балл
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
-          <div className="mt-6">
+          {renderContent()}
+
+          <div className="mt-6 border-t border-gray-200 dark:border-gray-700 pt-4">
             <Link
               href="/"
-              className="inline-flex items-center gap-1 sm:gap-2 text-sm sm:text-base text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-500 transition-colors"
+              className="inline-flex items-center gap-2 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-500 transition-colors text-sm sm:text-base"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"

@@ -11,11 +11,22 @@ interface Test {
   imageUrl: string;
   updatedAt: string;
   tags: string[];
+  type: "quiz" | "test";
 }
 
 interface Tag {
   _id: string;
   name: string;
+}
+
+interface TestsResponse {
+  results: Test[];
+  pagination: {
+    total: number;
+    pages: number;
+    currentPage: number;
+    perPage: number;
+  };
 }
 
 export default function Home() {
@@ -46,12 +57,12 @@ export default function Home() {
         }
 
         const [testsData, tagsData] = await Promise.all([
-          testsRes.json(),
+          testsRes.json() as Promise<TestsResponse>,
           tagsRes.json(),
         ]);
 
-        setTests(testsData);
-        setFilteredTests(testsData);
+        setTests(testsData.results);
+        setFilteredTests(testsData.results);
         setTags(tagsData);
       } catch (err) {
         setError("Не удалось загрузить тесты");
@@ -115,7 +126,7 @@ export default function Home() {
     <div className="bg-gray-400 w-full min-h-screen dark:bg-gray-900 overflow-x-hidden">
       <NavBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
 
-      <div className="mx-auto p-4 max-w-[1400px] mt-16 sm:mt-20">
+      <div className="mx-auto p-4 max-w-[1400px] mt-24 sm:mt-28">
         <div className="p-4 flex justify-center">
           <div className="flex flex-wrap gap-2 justify-center">
             {tags.map((tag) => (
@@ -145,6 +156,7 @@ export default function Home() {
               description={test.description}
               imageUrl={test.imageUrl}
               updatedAt={test.updatedAt}
+              type={test.type}
               tags={test.tags
                 .map((tagId) => getTagInfo(tagId))
                 .filter((tag): tag is Tag => tag !== undefined)}

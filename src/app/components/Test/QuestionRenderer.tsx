@@ -13,33 +13,20 @@ interface QuestionRendererProps {
 }
 
 // Компонент для отображения изображения вопроса
-const QuestionImage = ({ imageUrl }: { imageUrl: string }) => {
-  const [error, setError] = useState(false);
-
-  if (error) {
-    return (
-      <div className="mb-4 w-full max-w-2xl mx-auto h-[300px] rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-        <p className="text-gray-500 dark:text-gray-400">
-          Изображение недоступно
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="mb-4 relative w-full max-w-2xl mx-auto h-[300px] rounded-lg overflow-hidden">
+const QuestionImage = ({ imageUrl }: { imageUrl: string }) => (
+  <div className="flex justify-center mb-4">
+    <div className="relative w-full flex justify-center">
       <Image
         src={imageUrl}
-        alt="Изображение к вопросу"
-        fill
-        style={{ objectFit: "contain" }}
-        className="rounded-lg"
-        onError={() => setError(true)}
-        loading="lazy"
+        alt="Question image"
+        width={800}
+        height={600}
+        className="max-w-full h-auto object-contain rounded-lg"
+        style={{ maxHeight: "600px" }}
       />
     </div>
-  );
-};
+  </div>
+);
 
 export default function QuestionRenderer({
   question,

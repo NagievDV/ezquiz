@@ -1,5 +1,5 @@
 import { QuestionDocument } from "@/models/Question";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   DragDropContext,
   Droppable,
@@ -30,10 +30,29 @@ export default function OrderQuestion({
   onAnswerChange,
 }: OrderQuestionProps) {
   const [items, setItems] = useState<string[]>(() => {
-    if (answer.length > 0) return answer;
-    // Перемешиваем элементы только при первой инициализации
-    return shuffleArray(question.order || []);
+    if (Array.isArray(answer) && answer.length > 0) return answer;
+    // Используем order для отображения и перемешиваем его, только если элементы не пустые
+    const nonEmptyItems = (question.order || []).filter(
+      (item) => item.trim() !== ""
+    );
+    return nonEmptyItems.length >= 2
+      ? shuffleArray(nonEmptyItems)
+      : question.order || [];
   });
+
+  useEffect(() => {
+    if (Array.isArray(answer) && answer.length > 0) {
+      setItems(answer);
+    } else if (question.order?.length >= 2 && items.length === 0) {
+      // Перемешиваем только если есть минимум 2 непустых элемента
+      const nonEmptyItems = question.order.filter((item) => item.trim() !== "");
+      setItems(
+        nonEmptyItems.length >= 2
+          ? shuffleArray([...question.order])
+          : [...question.order]
+      );
+    }
+  }, [answer, question.order]);
 
   const handleDragEnd = (result: DropResult) => {
     if (!result.destination) return;
@@ -85,7 +104,11 @@ export default function OrderQuestion({
               className="space-y-2"
             >
               {items.map((item, index) => (
-                <Draggable key={item} draggableId={item} index={index}>
+                <Draggable
+                  key={`item-${index}`}
+                  draggableId={`item-${index}`}
+                  index={index}
+                >
                   {(provided, snapshot) => (
                     <div
                       ref={provided.innerRef}

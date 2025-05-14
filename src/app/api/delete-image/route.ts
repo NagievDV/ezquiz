@@ -1,29 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { v2 as cloudinary } from 'cloudinary';
+import { unlink } from 'fs/promises';
+import { join } from 'path';
 
-export async function POST(req: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
-    const { publicId } = await req.json();
+    const { filename } = await request.json();
 
-    if (!publicId) {
+    // Проверяем, что filename не пустой и не содержит подозрительных символов
+    if (!filename || filename.includes('..') || filename.includes('/')) {
       return NextResponse.json(
-        { error: 'No public_id provided' },
+        { error: 'Invalid filename' },
         { status: 400 }
       );
     }
 
-    // Удаляем изображение из Cloudinary
-    const result = await cloudinary.uploader.destroy(publicId);
+    // Путь к файлу в uploads директории
+    const filepath = join(process.cwd(), 'public', 'uploads', filename);
 
-    if (result.result === 'ok') {
-      return NextResponse.json({ message: 'Image deleted successfully' });
-    } else {
-      throw new Error('Failed to delete image');
-    }
+    // Удаляем файл
+    await unlink(filepath);
+
+    return NextResponse.json({ message: 'File deleted successfully' });
   } catch (error) {
-    console.error('Error deleting from Cloudinary:', error);
+    console.error('Error deleting file:', error);
     return NextResponse.json(
-      { error: 'Failed to delete image' },
+      { error: 'Failed to delete file' },
       { status: 500 }
     );
   }

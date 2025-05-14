@@ -18,6 +18,14 @@ export async function GET(req: NextRequest) {
   }
 }
 
+type RequestBody = {
+  question: string;
+  options: string[];
+  correctAnswer: string | string[];
+  type: string;
+  testId: string;
+};
+
 export async function POST(req: NextRequest) {
   await connectDB();
 

@@ -3,6 +3,7 @@ import QuestionRenderer from "./QuestionRenderer";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { FiArrowLeft } from "react-icons/fi";
 
 interface QuizTestProps {
   testId: string;
@@ -40,11 +41,12 @@ export default function QuizTest({
             correctAnswers.every((a) => userAnswers.includes(a));
           return acc + (isCorrect ? q.points : 0);
         case "order":
-          const correctOrder = q.order;
-          const userOrder = answer as string[];
-          const isOrderCorrect = correctOrder.every(
-            (item, index) => item === userOrder[index]
-          );
+          const correctOrder = q.order || [];
+          const userOrder = (answer as string[]) || [];
+          const isOrderCorrect =
+            correctOrder.length > 0 &&
+            userOrder.length > 0 &&
+            correctOrder.every((item, index) => item === userOrder[index]);
           return acc + (isOrderCorrect ? q.points : 0);
         case "match":
           const userMatches = (answer || {}) as Record<string, string>;
@@ -96,6 +98,16 @@ export default function QuizTest({
 
   return (
     <div className="space-y-6 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
+      <div className="flex justify-between items-center mb-6">
+        <button
+          onClick={() => router.push("/")}
+          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors"
+        >
+          <FiArrowLeft className="h-5 w-5" />
+          <span>На главную</span>
+        </button>
+      </div>
+
       {questions.map((question) => (
         <QuestionRenderer
           key={question._id.toString()}

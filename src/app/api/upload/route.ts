@@ -1,35 +1,56 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { v2 as cloudinary } from 'cloudinary';
+import { writeFile } from 'fs/promises';
+import { join } from 'path';
+import { v4 as uuidv4 } from 'uuid';
 
-export async function POST(req: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
-    const { image } = await req.json();
+    const formData = await request.formData();
+    const file = formData.get('file') as File;
 
-    if (!image) {
+    if (!file) {
       return NextResponse.json(
-        { error: 'No image provided' },
+        { error: 'No file uploaded' },
         { status: 400 }
       );
     }
 
-    // Загружаем изображение в Cloudinary
-    const result = await cloudinary.uploader.upload(image, {
-      folder: 'ezquiz', // Папка в Cloudinary
-      transformation: [
-        { width: 1200, crop: 'limit' }, // Ограничиваем максимальную ширину
-        { quality: 'auto' }, // Автоматическая оптимизация качества
-        { fetch_format: 'auto' }, // Автоматический выбор формата
-      ],
-    });
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      return NextResponse.json(
+        { error: 'File must be an image' },
+        { status: 400 }
+      );
+    }
 
-    return NextResponse.json({
-      url: result.secure_url,
-      public_id: result.public_id,
-    });
+    // Validate file size (10MB max)
+    if (file.size > 10 * 1024 * 1024) {
+      return NextResponse.json(
+        { error: 'File size must be less than 10MB' },
+        { status: 400 }
+      );
+    }
+
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+
+    // Generate unique filename
+    const uniqueId = uuidv4();
+    const extension = file.name.split('.').pop();
+    const filename = `${uniqueId}.${extension}`;
+
+    // Save to public/uploads directory
+    const path = join(process.cwd(), 'public', 'uploads', filename);
+    await writeFile(path, buffer);
+
+    // Return the URL
+    const url = `/uploads/${filename}`;
+
+    return NextResponse.json({ url });
   } catch (error) {
-    console.error('Error uploading to Cloudinary:', error);
+    console.error('Error handling file upload:', error);
     return NextResponse.json(
-      { error: 'Failed to upload image' },
+      { error: 'Error uploading file' },
       { status: 500 }
     );
   }
