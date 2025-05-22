@@ -16,7 +16,7 @@ export default function NavBar({ searchQuery, setSearchQuery }: NavBarProps) {
 
   return (
     <div className="fixed top-0 left-0 right-0 w-full bg-gray-400 dark:bg-gray-900 z-40 pt-2">
-      <nav className="bg-blue-900 w-[95%] sm:w-[90%] md:w-4/5 mx-auto p-2 sm:p-3 md:p-4 flex items-center justify-between rounded-xl gap-2 shadow-lg z-50">
+      <nav className="bg-blue-500 dark:bg-blue-900 w-[95%] sm:w-[90%] md:w-4/5 mx-auto p-2 sm:p-3 md:p-4 flex items-center justify-between rounded-xl gap-2 shadow-lg z-50">
         <Link
           href="/"
           className="flex items-center justify-center min-w-[40px] sm:min-w-[48px]"

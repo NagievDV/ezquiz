@@ -24,6 +24,7 @@ interface PendingTag {
 const MAX_TAGS = 3;
 const MAX_TITLE_LENGTH = 50;
 const MAX_DESCRIPTION_LENGTH = 100;
+const MAX_TAG_LENGTH = 20;
 
 const validateQuestion = (question: Question): string[] => {
   const errors: string[] = [];
@@ -37,9 +38,15 @@ const validateQuestion = (question: Question): string[] => {
     case "multiple":
       if (!question.options || question.options.length < 2) {
         errors.push("Добавьте минимум 2 варианта ответа");
+        return errors;
       }
 
       const trimmedOptions = question.options?.map((opt) => opt.trim()) || [];
+      if (trimmedOptions.some((opt) => opt === "")) {
+        errors.push("Заполните все варианты ответов");
+        return errors;
+      }
+
       const uniqueOptions = new Set(trimmedOptions);
       if (uniqueOptions.size !== trimmedOptions.length) {
         errors.push("Варианты ответов должны быть уникальными");
@@ -72,24 +79,39 @@ const validateQuestion = (question: Question): string[] => {
     case "order":
       if (!question.order || question.order.length < 2) {
         errors.push("Добавьте минимум 2 элемента для сортировки");
+        return errors;
       }
+
       const trimmedItems = question.order?.map((item) => item.trim()) || [];
+      if (trimmedItems.some((item) => item === "")) {
+        errors.push("Заполните все элементы для сортировки");
+        return errors;
+      }
+
       const uniqueItems = new Set(trimmedItems);
       if (uniqueItems.size !== trimmedItems.length) {
         errors.push("Элементы для сортировки должны быть уникальными");
-      }
-      if (question.order?.some((item) => !item.trim())) {
-        errors.push("Все элементы должны быть заполнены");
       }
       break;
     case "match":
       if (!question.matchPairs || question.matchPairs.length < 2) {
         errors.push("Добавьте минимум 2 пары для сопоставления");
+        return errors;
       }
+
       const leftParts =
         question.matchPairs?.map((pair) => pair.left.trim()) || [];
       const rightParts =
         question.matchPairs?.map((pair) => pair.right.trim()) || [];
+
+      if (
+        leftParts.some((part) => part === "") ||
+        rightParts.some((part) => part === "")
+      ) {
+        errors.push("Заполните обе части всех пар для сопоставления");
+        return errors;
+      }
+
       const uniqueLeftParts = new Set(leftParts);
       const uniqueRightParts = new Set(rightParts);
 
@@ -98,13 +120,6 @@ const validateQuestion = (question: Question): string[] => {
       }
       if (uniqueRightParts.size !== rightParts.length) {
         errors.push("Правые части пар должны быть уникальными");
-      }
-      if (
-        question.matchPairs?.some(
-          (pair) => !pair.left.trim() || !pair.right.trim()
-        )
-      ) {
-        errors.push("Все пары должны быть заполнены");
       }
       break;
   }
@@ -194,9 +209,11 @@ export default function TestForm({
   };
 
   const handleTagInput = async (value: string) => {
-    setTagInput(value);
-    if (value.length > 1) {
-      await fetchTags(value);
+    if (value.length <= MAX_TAG_LENGTH) {
+      setTagInput(value);
+      if (value.length > 1) {
+        await fetchTags(value);
+      }
     }
   };
 
@@ -240,6 +257,11 @@ export default function TestForm({
 
     const normalizedInput = tagInput.trim();
     if (!normalizedInput) return;
+
+    if (normalizedInput.length > MAX_TAG_LENGTH) {
+      setError(`Максимальная длина тега: ${MAX_TAG_LENGTH} символов`);
+      return;
+    }
 
     const existingTag = availableTags.find(
       (tag) => tag.name.toLowerCase() === normalizedInput.toLowerCase()
@@ -607,7 +629,7 @@ export default function TestForm({
                     </span>
                   ))}
                 </div>
-                <div className="relative bg-white dark:bg-gray-900">
+                <div className="relative">
                   <input
                     type="text"
                     value={tagInput}
@@ -624,10 +646,10 @@ export default function TestForm({
                         : "Добавить тег..."
                     }
                     disabled={getTotalTagsCount() >= MAX_TAGS}
-                    className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed"
+                    className="w-full px-4 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-0 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed transition-colors ring-0"
                   />
                   {tagInput && getTotalTagsCount() < MAX_TAGS && (
-                    <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 max-h-60 overflow-auto">
+                    <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 max-h-60 overflow-auto">
                       {isLoadingTags ? (
                         <div className="p-2 text-gray-500 dark:text-gray-400">
                           Загрузка...
@@ -751,100 +773,296 @@ export default function TestForm({
           </div>
         </form>
       ) : (
-        <div className="space-y-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <button
-              type="button"
-              onClick={() => handleAddQuestion("single")}
-              className="p-4 text-left border border-gray-200 dark:border-gray-700 rounded-lg hover:border-green-500 dark:hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all group"
-            >
-              <div className="font-medium text-gray-900 dark:text-white group-hover:text-green-700 dark:group-hover:text-green-400">
-                Один вариант ответа
-              </div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Выберите один правильный ответ
+        <div className="space-y-6">
+          {test.questions.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-gray-500 dark:text-gray-400 mb-6">
+                Добавьте первый вопрос к тесту
               </p>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleAddQuestion("multiple")}
-              className="p-4 text-left border border-gray-200 dark:border-gray-700 rounded-lg hover:border-green-500 dark:hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all group"
-            >
-              <div className="font-medium text-gray-900 dark:text-white group-hover:text-green-700 dark:group-hover:text-green-400">
-                Множественный выбор
+              <div className="flex flex-wrap gap-2 justify-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newQuestion: Question = {
+                      type: "single",
+                      question: "",
+                      points: 1,
+                      options: [],
+                      correctAnswer: "",
+                    };
+                    setTest((prev) => ({ ...prev, questions: [newQuestion] }));
+                  }}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-full hover:border-green-500 dark:hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all group text-gray-700 dark:text-white"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4 text-gray-400 group-hover:text-green-500"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                  Один вариант
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newQuestion: Question = {
+                      type: "multiple",
+                      question: "",
+                      points: 1,
+                      options: [],
+                      correctAnswer: [],
+                    };
+                    setTest((prev) => ({ ...prev, questions: [newQuestion] }));
+                  }}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-full hover:border-green-500 dark:hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all group text-gray-700 dark:text-white"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4 text-gray-400 group-hover:text-green-500"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  Множественный выбор
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newQuestion: Question = {
+                      type: "order",
+                      question: "",
+                      points: 1,
+                      order: ["", ""],
+                    };
+                    setTest((prev) => ({ ...prev, questions: [newQuestion] }));
+                  }}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-full hover:border-green-500 dark:hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all group text-gray-700 dark:text-white"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4 text-gray-400 group-hover:text-green-500"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M7 16V4M7 4L3 8M7 4L11 8M17 8V20M17 20L13 16M17 20L21 16"
+                    />
+                  </svg>
+                  Сортировка
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newQuestion: Question = {
+                      type: "match",
+                      question: "",
+                      points: 1,
+                      matchPairs: [],
+                    };
+                    setTest((prev) => ({ ...prev, questions: [newQuestion] }));
+                  }}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-full hover:border-green-500 dark:hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all group text-gray-700 dark:text-white"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4 text-gray-400 group-hover:text-green-500"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M8 7h12M8 12h12M8 17h12M4 7h0M4 12h0M4 17h0"
+                    />
+                  </svg>
+                  Сопоставление
+                </button>
               </div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Выберите несколько правильных ответов
-              </p>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleAddQuestion("order")}
-              className="p-4 text-left border border-gray-200 dark:border-gray-700 rounded-lg hover:border-green-500 dark:hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all group"
-            >
-              <div className="font-medium text-gray-900 dark:text-white group-hover:text-green-700 dark:group-hover:text-green-400">
-                Порядок элементов
+            </div>
+          ) : (
+            test.questions.map((question, index) => (
+              <div key={index}>
+                <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-6 bg-white dark:bg-gray-800 shadow-sm">
+                  <QuestionEditor
+                    question={question}
+                    onChange={(updatedQuestion) =>
+                      handleQuestionChange(index, updatedQuestion)
+                    }
+                    onRemove={() => handleRemoveQuestion(index)}
+                  />
+                </div>
+                <div className="mt-2 flex flex-wrap gap-2 justify-center">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newQuestion: Question = {
+                        type: "single",
+                        question: "",
+                        points: 1,
+                        options: [],
+                        correctAnswer: "",
+                      };
+                      const newQuestions = [...test.questions];
+                      newQuestions.splice(index + 1, 0, newQuestion);
+                      setTest((prev) => ({ ...prev, questions: newQuestions }));
+                    }}
+                    className="inline-flex items-center gap-2 px-3 py-1.5 text-sm bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-full hover:border-green-500 dark:hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all group text-gray-700 dark:text-white"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-4 w-4 text-gray-400 group-hover:text-green-500"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                    Один вариант
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newQuestion: Question = {
+                        type: "multiple",
+                        question: "",
+                        points: 1,
+                        options: [],
+                        correctAnswer: [],
+                      };
+                      const newQuestions = [...test.questions];
+                      newQuestions.splice(index + 1, 0, newQuestion);
+                      setTest((prev) => ({ ...prev, questions: newQuestions }));
+                    }}
+                    className="inline-flex items-center gap-2 px-3 py-1.5 text-sm bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-full hover:border-green-500 dark:hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all group text-gray-700 dark:text-white"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-4 w-4 text-gray-400 group-hover:text-green-500"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    Множественный выбор
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newQuestion: Question = {
+                        type: "order",
+                        question: "",
+                        points: 1,
+                        order: ["", ""],
+                      };
+                      const newQuestions = [...test.questions];
+                      newQuestions.splice(index + 1, 0, newQuestion);
+                      setTest((prev) => ({ ...prev, questions: newQuestions }));
+                    }}
+                    className="inline-flex items-center gap-2 px-3 py-1.5 text-sm bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-full hover:border-green-500 dark:hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all group text-gray-700 dark:text-white"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-4 w-4 text-gray-400 group-hover:text-green-500"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M7 16V4M7 4L3 8M7 4L11 8M17 8V20M17 20L13 16M17 20L21 16"
+                      />
+                    </svg>
+                    Сортировка
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newQuestion: Question = {
+                        type: "match",
+                        question: "",
+                        points: 1,
+                        matchPairs: [],
+                      };
+                      const newQuestions = [...test.questions];
+                      newQuestions.splice(index + 1, 0, newQuestion);
+                      setTest((prev) => ({ ...prev, questions: newQuestions }));
+                    }}
+                    className="inline-flex items-center gap-2 px-3 py-1.5 text-sm bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-full hover:border-green-500 dark:hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all group text-gray-700 dark:text-white"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-4 w-4 text-gray-400 group-hover:text-green-500"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M8 7h12M8 12h12M8 17h12M4 7h0M4 12h0M4 17h0"
+                      />
+                    </svg>
+                    Сопоставление
+                  </button>
+                </div>
               </div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Расположите элементы в правильном порядке
-              </p>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleAddQuestion("match")}
-              className="p-4 text-left border border-gray-200 dark:border-gray-700 rounded-lg hover:border-green-500 dark:hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all group"
-            >
-              <div className="font-medium text-gray-900 dark:text-white group-hover:text-green-700 dark:group-hover:text-green-400">
-                Сопоставление
-              </div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Соедините соответствующие элементы в пары
-              </p>
-            </button>
-          </div>
-
-          <div className="space-y-6">
-            {test.questions.map((question, index) => (
-              <div
-                key={index}
-                className="border border-gray-200 dark:border-gray-700 rounded-lg p-6 bg-white dark:bg-gray-800 shadow-sm"
-              >
-                <QuestionEditor
-                  question={question}
-                  onChange={(updatedQuestion) =>
-                    handleQuestionChange(index, updatedQuestion)
-                  }
-                  onRemove={() => handleRemoveQuestion(index)}
-                />
-              </div>
-            ))}
-
-            {test.questions.length === 0 && (
-              <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-                Добавьте вопросы к тесту, используя кнопки выше
-              </div>
-            )}
-          </div>
-
-          <div className="flex justify-between">
-            <button
-              type="button"
-              onClick={() => setCurrentStep("info")}
-              className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium"
-            >
-              Назад
-            </button>
-            <button
-              type="button"
-              onClick={handleSubmit}
-              disabled={isSubmitting}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:bg-blue-400"
-            >
-              {isSubmitting ? "Сохранение..." : "Сохранить тест"}
-            </button>
-          </div>
+            ))
+          )}
         </div>
       )}
+
+      <div className="flex justify-between mt-8">
+        <button
+          type="button"
+          onClick={() => setCurrentStep("info")}
+          className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium"
+        >
+          Назад
+        </button>
+        <button
+          type="button"
+          onClick={handleSubmit}
+          disabled={isSubmitting}
+          className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:bg-blue-400"
+        >
+          {isSubmitting ? "Сохранение..." : "Сохранить тест"}
+        </button>
+      </div>
     </div>
   );
 }

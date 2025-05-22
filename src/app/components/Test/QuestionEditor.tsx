@@ -24,9 +24,10 @@ interface QuestionEditorProps {
 }
 
 const MAX_ITEMS = 10;
-const MAX_QUESTION_LENGTH = 500;
+const MAX_QUESTION_LENGTH = 300;
 const MAX_OPTION_LENGTH = 200;
 const MIN_POINTS = 1;
+const MAX_POINTS = 100;
 
 export default function QuestionEditor({
   question,
@@ -49,8 +50,13 @@ export default function QuestionEditor({
     onChange({ ...question, question: questionText });
   };
 
-  const handlePointsChange = (points: number) => {
-    onChange({ ...question, points });
+  const handlePointsChange = (points: number | "") => {
+    if (points === "") {
+      onChange({ ...question, points: MIN_POINTS });
+    } else {
+      const validPoints = Math.min(Math.max(points, MIN_POINTS), MAX_POINTS);
+      onChange({ ...question, points: validPoints });
+    }
   };
 
   const handleOptionsChange = (
@@ -63,6 +69,14 @@ export default function QuestionEditor({
         isNewItem || !checkDuplicates
           ? options
           : options.filter((option) => option.trim() !== "");
+
+      if (!isNewItem && checkDuplicates && newOptions.length > 0) {
+        const hasEmptyOptions = newOptions.some((opt) => opt.trim() === "");
+        if (hasEmptyOptions) {
+          toast.error("Заполните все варианты ответов");
+          return;
+        }
+      }
 
       const uniqueOptions = checkDuplicates
         ? Array.from(new Set(newOptions.map((opt) => opt.trim()))).filter(
@@ -105,14 +119,21 @@ export default function QuestionEditor({
     }
   };
 
-  const handleOrderItemsChange = (items: string[], isNewItem = false) => {
+  const handleOrderItemsChange = (
+    items: string[],
+    isNewItem = false,
+    validateEmpty = false
+  ) => {
     if (question.type === "order") {
-      const newItems = isNewItem
-        ? items
-        : items.filter((item) => {
-            const nonEmptyItems = items.filter((i) => i.trim() !== "");
-            return nonEmptyItems.length >= 2 ? item.trim() !== "" : true;
-          });
+      const newItems = items;
+
+      if (validateEmpty && newItems.length > 0) {
+        const hasEmptyItems = newItems.some((item) => item.trim() === "");
+        if (hasEmptyItems) {
+          toast.error("Заполните все элементы для сортировки");
+          return;
+        }
+      }
 
       if (newItems.length < 2) {
         newItems.push("");
@@ -127,9 +148,20 @@ export default function QuestionEditor({
 
   const handleMatchPairsChange = (
     matchPairs: MatchPair[],
-    isNewItem = false
+    isNewItem = false,
+    validateEmpty = false
   ) => {
     if (question.type === "match") {
+      if (validateEmpty && matchPairs.length > 0) {
+        const hasEmptyParts = matchPairs.some(
+          (pair) => pair.left.trim() === "" || pair.right.trim() === ""
+        );
+        if (hasEmptyParts) {
+          toast.error("Заполните обе части всех пар для сопоставления");
+          return;
+        }
+      }
+
       onChange({ ...question, matchPairs });
     }
   };
@@ -404,8 +436,21 @@ export default function QuestionEditor({
                               if (newValue.length <= MAX_OPTION_LENGTH) {
                                 const newItems = [...question.order];
                                 newItems[index] = newValue;
-                                handleOrderItemsChange(newItems);
+                                handleOrderItemsChange(newItems, true, false);
                               }
+                            }}
+                            onBlur={(e) => {
+                              const newValue = e.target.value;
+                              const newItems = [...question.order];
+                              newItems[index] = newValue;
+                              const wasFilledBefore = item.trim() !== "";
+                              const shouldValidate =
+                                wasFilledBefore && newValue.trim() === "";
+                              handleOrderItemsChange(
+                                newItems,
+                                false,
+                                shouldValidate
+                              );
                             }}
                             className="flex-1 w-full px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:focus:ring-blue-500 dark:focus:border-blue-500 text-gray-900 dark:text-white caret-blue-500 dark:caret-blue-400 placeholder:text-gray-500 dark:placeholder:text-gray-400 transition-all hover:border-gray-400 dark:hover:border-gray-500"
                             placeholder="Элемент"
@@ -417,7 +462,7 @@ export default function QuestionEditor({
                               const newItems = question.order.filter(
                                 (_, i) => i !== index
                               );
-                              handleOrderItemsChange(newItems);
+                              handleOrderItemsChange(newItems, false, true);
                             }}
                             className="p-2 text-gray-400 hover:text-red-600 dark:text-gray-500 dark:hover:text-red-500 transition-all absolute -right-1 top-0 sm:static sm:translate-y-0 sm:opacity-0 group-hover:opacity-100 z-10"
                           >
@@ -435,7 +480,7 @@ export default function QuestionEditor({
           <button
             type="button"
             onClick={() =>
-              handleOrderItemsChange([...question.order, ""], true)
+              handleOrderItemsChange([...question.order, ""], true, false)
             }
             disabled={hasReachedLimit}
             className={`mt-3 flex items-center gap-2 text-sm transition-all ${
@@ -488,8 +533,17 @@ export default function QuestionEditor({
                       if (newValue.length <= MAX_OPTION_LENGTH) {
                         const newPairs = [...question.matchPairs];
                         newPairs[index] = { ...pair, left: newValue };
-                        handleMatchPairsChange(newPairs);
+                        handleMatchPairsChange(newPairs, false, false);
                       }
+                    }}
+                    onBlur={(e) => {
+                      const newValue = e.target.value;
+                      const newPairs = [...question.matchPairs];
+                      newPairs[index] = { ...pair, left: newValue };
+                      const wasFilledBefore = pair.left.trim() !== "";
+                      const shouldValidate =
+                        wasFilledBefore && newValue.trim() === "";
+                      handleMatchPairsChange(newPairs, false, shouldValidate);
                     }}
                     className="flex-1 w-full px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:focus:ring-blue-500 dark:focus:border-blue-500 text-gray-900 dark:text-white caret-blue-500 dark:caret-blue-400 placeholder:text-gray-500 dark:placeholder:text-gray-400 transition-all hover:border-gray-400 dark:hover:border-gray-500"
                     placeholder="Левая часть"
@@ -506,8 +560,17 @@ export default function QuestionEditor({
                       if (newValue.length <= MAX_OPTION_LENGTH) {
                         const newPairs = [...question.matchPairs];
                         newPairs[index] = { ...pair, right: newValue };
-                        handleMatchPairsChange(newPairs);
+                        handleMatchPairsChange(newPairs, false, false);
                       }
+                    }}
+                    onBlur={(e) => {
+                      const newValue = e.target.value;
+                      const newPairs = [...question.matchPairs];
+                      newPairs[index] = { ...pair, right: newValue };
+                      const wasFilledBefore = pair.right.trim() !== "";
+                      const shouldValidate =
+                        wasFilledBefore && newValue.trim() === "";
+                      handleMatchPairsChange(newPairs, false, shouldValidate);
                     }}
                     className="flex-1 w-full px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:focus:ring-blue-500 dark:focus:border-blue-500 text-gray-900 dark:text-white caret-blue-500 dark:caret-blue-400 placeholder:text-gray-500 dark:placeholder:text-gray-400 transition-all hover:border-gray-400 dark:hover:border-gray-500"
                     placeholder="Правая часть"
@@ -520,7 +583,7 @@ export default function QuestionEditor({
                     const newPairs = question.matchPairs.filter(
                       (_, i) => i !== index
                     );
-                    handleMatchPairsChange(newPairs);
+                    handleMatchPairsChange(newPairs, false, true);
                   }}
                   className="p-2 text-gray-400 hover:text-red-600 dark:text-gray-500 dark:hover:text-red-500 transition-all absolute -right-1 top-0 sm:static sm:translate-y-0 sm:opacity-0 group-hover:opacity-100 z-10"
                 >
@@ -534,7 +597,8 @@ export default function QuestionEditor({
             onClick={() =>
               handleMatchPairsChange(
                 [...question.matchPairs, { left: "", right: "" }],
-                true
+                true,
+                false
               )
             }
             disabled={hasReachedLimit}
@@ -635,17 +699,18 @@ export default function QuestionEditor({
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Баллы за вопрос
+              Баллы за вопрос ({MIN_POINTS}-{MAX_POINTS})
             </label>
             <input
               type="number"
               min={MIN_POINTS}
+              max={MAX_POINTS}
               value={question.points}
+              onFocus={(e) => e.target.select()}
               onChange={(e) => {
-                const value = Number(e.target.value);
-                if (value >= MIN_POINTS) {
-                  handlePointsChange(value);
-                }
+                const value =
+                  e.target.value === "" ? "" : Number(e.target.value);
+                handlePointsChange(value);
               }}
               className="block w-32 px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:focus:ring-blue-500 dark:focus:border-blue-500 text-gray-900 dark:text-white caret-blue-500 dark:caret-blue-400 transition-all hover:border-gray-400 dark:hover:border-gray-500"
             />

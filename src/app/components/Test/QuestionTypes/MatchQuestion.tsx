@@ -105,17 +105,19 @@ export default function MatchQuestion({
       </h3>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-        <div className="space-y-2 w-full">
+        <div className="grid auto-rows-fr gap-2 w-full">
           {matchPairs.map((pair, index) => (
             <div
               key={pair.left}
-              className="p-3 sm:p-4 rounded-lg bg-gray-50 dark:bg-gray-700 flex items-center gap-3 min-h-[3.5rem] sm:min-h-[4rem]"
+              className="p-3 sm:p-4 rounded-lg bg-gray-50 dark:bg-gray-700 flex flex-col justify-center min-h-[3.5rem] sm:min-h-[4rem]"
             >
-              <div className="text-gray-500 dark:text-gray-400 min-w-[24px] text-center">
-                {index + 1}.
-              </div>
-              <div className="flex-1 text-sm sm:text-base dark:text-gray-200">
-                {pair.left}
+              <div className="flex gap-3">
+                <div className="text-gray-500 dark:text-gray-400 min-w-[24px] text-center">
+                  {index + 1}.
+                </div>
+                <div className="flex-1 text-sm sm:text-base dark:text-gray-200 whitespace-pre-wrap break-words">
+                  {pair.left}
+                </div>
               </div>
             </div>
           ))}
@@ -127,7 +129,7 @@ export default function MatchQuestion({
               <div
                 {...provided.droppableProps}
                 ref={provided.innerRef}
-                className="space-y-2 w-full"
+                className="grid auto-rows-fr gap-2 w-full"
               >
                 {rightItems.map((item, index) => (
                   <Draggable key={item.id} draggableId={item.id} index={index}>
@@ -144,71 +146,73 @@ export default function MatchQuestion({
                           }
                           hover:bg-blue-50 dark:hover:bg-gray-600
                           transition-colors duration-200
-                          flex items-center gap-3
+                          flex flex-col justify-center
                           touch-manipulation
                           min-h-[3.5rem] sm:min-h-[4rem]
                         `}
                       >
-                        <div className="text-gray-500 dark:text-gray-400 min-w-[24px] text-center">
-                          {String.fromCharCode(65 + index)}
-                        </div>
-                        <div className="flex-1 text-sm sm:text-base dark:text-gray-200">
-                          {item.content}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => moveUp(index)}
-                            className={`p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors
-                              ${
-                                index === 0
-                                  ? "opacity-50 cursor-not-allowed"
-                                  : ""
-                              }`}
-                            disabled={index === 0}
-                          >
-                            <svg
-                              className="w-5 h-5 text-gray-600 dark:text-gray-400"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
+                        <div className="flex gap-3">
+                          <div className="text-gray-500 dark:text-gray-400 min-w-[24px] text-center">
+                            {String.fromCharCode(65 + index)}
+                          </div>
+                          <div className="flex-1 text-sm sm:text-base dark:text-gray-200 whitespace-pre-wrap break-words">
+                            {item.content}
+                          </div>
+                          <div className="flex items-center gap-1 ml-2">
+                            <button
+                              onClick={() => moveUp(index)}
+                              className={`p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors
+                                ${
+                                  index === 0
+                                    ? "opacity-50 cursor-not-allowed"
+                                    : ""
+                                }`}
+                              disabled={index === 0}
                             >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M5 15l7-7 7 7"
-                              />
-                            </svg>
-                          </button>
-                          <button
-                            onClick={() => moveDown(index)}
-                            className={`p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors
-                              ${
-                                index === rightItems.length - 1
-                                  ? "opacity-50 cursor-not-allowed"
-                                  : ""
-                              }`}
-                            disabled={index === rightItems.length - 1}
-                          >
-                            <svg
-                              className="w-5 h-5 text-gray-600 dark:text-gray-400"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
+                              <svg
+                                className="w-5 h-5 text-gray-600 dark:text-gray-400"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M5 15l7-7 7 7"
+                                />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={() => moveDown(index)}
+                              className={`p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors
+                                ${
+                                  index === rightItems.length - 1
+                                    ? "opacity-50 cursor-not-allowed"
+                                    : ""
+                                }`}
+                              disabled={index === rightItems.length - 1}
                             >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M19 9l-7 7-7-7"
-                              />
-                            </svg>
-                          </button>
-                          <div
-                            {...provided.dragHandleProps}
-                            className="p-1.5 cursor-move touch-manipulation"
-                          >
-                            <IoReorderThreeOutline className="w-5 h-5 text-gray-400 dark:text-gray-500" />
+                              <svg
+                                className="w-5 h-5 text-gray-600 dark:text-gray-400"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M19 9l-7 7-7-7"
+                                />
+                              </svg>
+                            </button>
+                            <div
+                              {...provided.dragHandleProps}
+                              className="p-1.5 cursor-move touch-manipulation"
+                            >
+                              <IoReorderThreeOutline className="w-5 h-5 text-gray-400 dark:text-gray-500" />
+                            </div>
                           </div>
                         </div>
                       </div>

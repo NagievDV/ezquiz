@@ -454,17 +454,17 @@ export default function ProfilePage() {
                         {result.score}/{result.maxScore}
                       </div>
                       <div
-                        className={`h-1.5 w-full mt-2 rounded-full ${
-                          percentage >= 80
-                            ? "bg-green-500"
-                            : percentage >= 60
-                            ? "bg-yellow-500"
-                            : "bg-red-500"
-                        }`}
+                        className={`h-1.5 w-full mt-2 rounded-full bg-opacity-20 dark:bg-opacity-40 bg-white`}
                       >
                         <div
-                          className="h-full rounded-full bg-opacity-20 dark:bg-opacity-40 bg-white"
-                          style={{ width: `${100 - percentage}%` }}
+                          className={`h-full rounded-full ${
+                            percentage >= 80
+                              ? "bg-green-500"
+                              : percentage >= 60
+                              ? "bg-yellow-500"
+                              : "bg-red-500"
+                          }`}
+                          style={{ width: `${percentage}%` }}
                         />
                       </div>
                     </div>
