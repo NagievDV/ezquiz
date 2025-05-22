@@ -10,16 +10,14 @@ export async function GET(req: NextRequest) {
     const search = searchParams.get("search");
     const id = searchParams.get("id");
 
-    // If ID is provided, return single tag
     if (id) {
       const tag = await Tag.findById(id);
       if (!tag) {
-        return NextResponse.json({ error: "Tag not found" }, { status: 404 });
+        return NextResponse.json({ error: "Тег не найден" }, { status: 404 });
       }
       return NextResponse.json(tag);
     }
 
-    // Otherwise, return filtered tags
     let query = {};
     if (search) {
       query = { name: { $regex: search, $options: "i" } };
@@ -28,9 +26,9 @@ export async function GET(req: NextRequest) {
     const tags = await Tag.find(query).sort({ name: 1 });
     return NextResponse.json(tags);
   } catch (error) {
-    console.error("Error fetching tags:", error);
+    console.error("Ошибка при получении тегов:", error);
     return NextResponse.json(
-      { error: "Failed to fetch tags" },
+      { error: "Не удалось получить теги" },
       { status: 500 }
     );
   }
@@ -43,24 +41,22 @@ export async function POST(req: NextRequest) {
 
     if (!name) {
       return NextResponse.json(
-        { error: "Tag name is required" },
+        { error: "Требуется имя тега" },
         { status: 400 }
       );
     }
 
-    // Check if tag already exists
     const existingTag = await Tag.findOne({ name: { $regex: new RegExp(`^${name}$`, "i") } });
     if (existingTag) {
       return NextResponse.json(existingTag);
     }
 
-    // Create new tag
     const tag = await Tag.create({ name });
     return NextResponse.json(tag, { status: 201 });
   } catch (error) {
-    console.error("Error creating tag:", error);
+    console.error("Ошибка при создании тега:", error);
     return NextResponse.json(
-      { error: "Failed to create tag" },
+      { error: "Не удалось создать тег" },
       { status: 500 }
     );
   }
@@ -73,11 +69,11 @@ export async function DELETE(req: NextRequest) {
   try {
     const deletedTag = await Tag.findByIdAndDelete(id);
     if (!deletedTag) {
-      return NextResponse.json({ error: "Tag not found" }, { status: 404 });
+      return NextResponse.json({ error: "Тег не найден" }, { status: 404 });
     }
-    return NextResponse.json({ message: "Tag deleted successfully" });
+    return NextResponse.json({ message: "Тег удален успешно" });
   } catch (error) {
-    console.error("Error deleting tag:", error);
-    return NextResponse.json({ error: "Failed to delete tag" }, { status: 500 });
+    console.error("Ошибка при удалении тега:", error);
+    return NextResponse.json({ error: "Не удалось удалить тег" }, { status: 500 });
   }
 }

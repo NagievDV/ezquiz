@@ -13,7 +13,7 @@ import {
 } from "@hello-pangea/dnd";
 import { useState, useEffect } from "react";
 import { CgAlbum } from "react-icons/cg";
-import { uploadImage } from "@/libs/imageprocess";
+import { uploadImage } from "@/libs/imageUpload";
 import Image from "next/image";
 import { toast } from "react-hot-toast";
 
@@ -24,6 +24,9 @@ interface QuestionEditorProps {
 }
 
 const MAX_ITEMS = 10;
+const MAX_QUESTION_LENGTH = 500;
+const MAX_OPTION_LENGTH = 200;
+const MIN_POINTS = 1;
 
 export default function QuestionEditor({
   question,
@@ -50,12 +53,43 @@ export default function QuestionEditor({
     onChange({ ...question, points });
   };
 
-  const handleOptionsChange = (options: string[], isNewItem = false) => {
+  const handleOptionsChange = (
+    options: string[],
+    isNewItem = false,
+    checkDuplicates = false
+  ) => {
     if (question.type === "single" || question.type === "multiple") {
-      const newOptions = isNewItem
-        ? options
-        : options.filter((option) => option.trim() !== "");
-      onChange({ ...question, options: newOptions });
+      const newOptions =
+        isNewItem || !checkDuplicates
+          ? options
+          : options.filter((option) => option.trim() !== "");
+
+      const uniqueOptions = checkDuplicates
+        ? Array.from(new Set(newOptions.map((opt) => opt.trim()))).filter(
+            (opt) => opt !== ""
+          )
+        : newOptions;
+
+      if (question.type === "single") {
+        const currentAnswer = question.correctAnswer as string;
+        onChange({
+          ...question,
+          options: uniqueOptions,
+          correctAnswer: uniqueOptions.includes(currentAnswer)
+            ? currentAnswer
+            : "",
+        });
+      } else {
+        const currentAnswers = question.correctAnswer as string[];
+        const validAnswers = currentAnswers.filter((answer) =>
+          uniqueOptions.includes(answer)
+        );
+        onChange({
+          ...question,
+          options: uniqueOptions,
+          correctAnswer: validAnswers,
+        });
+      }
     }
   };
 
@@ -63,7 +97,11 @@ export default function QuestionEditor({
     if (question.type === "single") {
       onChange({ ...question, correctAnswer: value as string });
     } else if (question.type === "multiple") {
-      onChange({ ...question, correctAnswer: value as string[] });
+      const newAnswers = value as string[];
+      const validAnswers = newAnswers.filter((answer) =>
+        question.options?.includes(answer)
+      );
+      onChange({ ...question, correctAnswer: validAnswers });
     }
   };
 
@@ -111,7 +149,7 @@ export default function QuestionEditor({
         imageUrl: url,
       });
     } catch (error) {
-      console.error("Error uploading image:", error);
+      console.error("Ошибка при загрузке изображения:", error);
       toast.error("Ошибка при загрузке изображения");
     }
   };
@@ -124,9 +162,14 @@ export default function QuestionEditor({
       <div className="space-y-4 bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
         <div>
           <div className="flex justify-between items-center mb-3">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Варианты ответов
-            </label>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Варианты ответов
+              </label>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Выберите один правильный вариант, отметив его радиокнопкой слева
+              </p>
+            </div>
             <span className="text-sm text-gray-500 dark:text-gray-400">
               {question.options.length}/{MAX_ITEMS}
             </span>
@@ -147,12 +190,21 @@ export default function QuestionEditor({
                   type="text"
                   value={option}
                   onChange={(e) => {
+                    const newValue = e.target.value;
+                    if (newValue.length <= MAX_OPTION_LENGTH) {
+                      const newOptions = [...question.options];
+                      newOptions[index] = newValue;
+                      handleOptionsChange(newOptions, false, false);
+                    }
+                  }}
+                  onBlur={(e) => {
                     const newOptions = [...question.options];
                     newOptions[index] = e.target.value;
-                    handleOptionsChange(newOptions);
+                    handleOptionsChange(newOptions, false, true);
                   }}
                   className="flex-1 w-full px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:focus:ring-blue-500 dark:focus:border-blue-500 text-gray-900 dark:text-white caret-blue-500 dark:caret-blue-400 placeholder:text-gray-500 dark:placeholder:text-gray-400 transition-all hover:border-gray-400 dark:hover:border-gray-500"
                   placeholder="Вариант ответа"
+                  maxLength={MAX_OPTION_LENGTH}
                 />
                 <button
                   type="button"
@@ -160,7 +212,7 @@ export default function QuestionEditor({
                     const newOptions = question.options.filter(
                       (_, i) => i !== index
                     );
-                    handleOptionsChange(newOptions);
+                    handleOptionsChange(newOptions, false, true);
                   }}
                   className="p-2 text-gray-400 hover:text-red-600 dark:text-gray-500 dark:hover:text-red-500 transition-all absolute -right-1 top-0 sm:static sm:translate-y-0 sm:opacity-0 group-hover:opacity-100 z-10"
                 >
@@ -171,7 +223,9 @@ export default function QuestionEditor({
           </div>
           <button
             type="button"
-            onClick={() => handleOptionsChange([...question.options, ""], true)}
+            onClick={() =>
+              handleOptionsChange([...question.options, ""], true, false)
+            }
             disabled={hasReachedLimit}
             className={`mt-3 flex items-center gap-2 text-sm transition-all ${
               hasReachedLimit
@@ -195,9 +249,14 @@ export default function QuestionEditor({
       <div className="space-y-4 bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
         <div>
           <div className="flex justify-between items-center mb-3">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Варианты ответов
-            </label>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Варианты ответов
+              </label>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Отметьте галочками все правильные варианты ответов
+              </p>
+            </div>
             <span className="text-sm text-gray-500 dark:text-gray-400">
               {question.options.length}/{MAX_ITEMS}
             </span>
@@ -227,12 +286,21 @@ export default function QuestionEditor({
                   type="text"
                   value={option}
                   onChange={(e) => {
+                    const newValue = e.target.value;
+                    if (newValue.length <= MAX_OPTION_LENGTH) {
+                      const newOptions = [...question.options];
+                      newOptions[index] = newValue;
+                      handleOptionsChange(newOptions, false, false);
+                    }
+                  }}
+                  onBlur={(e) => {
                     const newOptions = [...question.options];
                     newOptions[index] = e.target.value;
-                    handleOptionsChange(newOptions);
+                    handleOptionsChange(newOptions, false, true);
                   }}
                   className="flex-1 w-full px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:focus:ring-blue-500 dark:focus:border-blue-500 text-gray-900 dark:text-white caret-blue-500 dark:caret-blue-400 placeholder:text-gray-500 dark:placeholder:text-gray-400 transition-all hover:border-gray-400 dark:hover:border-gray-500"
                   placeholder="Вариант ответа"
+                  maxLength={MAX_OPTION_LENGTH}
                 />
                 <button
                   type="button"
@@ -240,7 +308,7 @@ export default function QuestionEditor({
                     const newOptions = question.options.filter(
                       (_, i) => i !== index
                     );
-                    handleOptionsChange(newOptions);
+                    handleOptionsChange(newOptions, false, true);
                   }}
                   className="p-2 text-gray-400 hover:text-red-600 dark:text-gray-500 dark:hover:text-red-500 transition-all absolute -right-1 top-0 sm:static sm:translate-y-0 sm:opacity-0 group-hover:opacity-100 z-10"
                 >
@@ -251,7 +319,9 @@ export default function QuestionEditor({
           </div>
           <button
             type="button"
-            onClick={() => handleOptionsChange([...question.options, ""], true)}
+            onClick={() =>
+              handleOptionsChange([...question.options, ""], true, false)
+            }
             disabled={hasReachedLimit}
             className={`mt-3 flex items-center gap-2 text-sm transition-all ${
               hasReachedLimit
@@ -277,9 +347,15 @@ export default function QuestionEditor({
       <div className="space-y-4 bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
         <div>
           <div className="flex justify-between items-center mb-3">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Элементы для сортировки
-            </label>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Элементы для сортировки
+              </label>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Расположите элементы в правильном порядке. Студент должен будет
+                восстановить этот порядок
+              </p>
+            </div>
             <span className="text-sm text-gray-500 dark:text-gray-400">
               {question.order.length}/{MAX_ITEMS}
             </span>
@@ -324,12 +400,16 @@ export default function QuestionEditor({
                             type="text"
                             value={item}
                             onChange={(e) => {
-                              const newItems = [...question.order];
-                              newItems[index] = e.target.value;
-                              handleOrderItemsChange(newItems);
+                              const newValue = e.target.value;
+                              if (newValue.length <= MAX_OPTION_LENGTH) {
+                                const newItems = [...question.order];
+                                newItems[index] = newValue;
+                                handleOrderItemsChange(newItems);
+                              }
                             }}
                             className="flex-1 w-full px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:focus:ring-blue-500 dark:focus:border-blue-500 text-gray-900 dark:text-white caret-blue-500 dark:caret-blue-400 placeholder:text-gray-500 dark:placeholder:text-gray-400 transition-all hover:border-gray-400 dark:hover:border-gray-500"
                             placeholder="Элемент"
+                            maxLength={MAX_OPTION_LENGTH}
                           />
                           <button
                             type="button"
@@ -380,9 +460,15 @@ export default function QuestionEditor({
       <div className="space-y-4 bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
         <div>
           <div className="flex justify-between items-center mb-3">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Пары для сопоставления
-            </label>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Пары для сопоставления
+              </label>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Создайте пары для сопоставления. Студент должен будет соединить
+                левые элементы с правыми
+              </p>
+            </div>
             <span className="text-sm text-gray-500 dark:text-gray-400">
               {question.matchPairs.length}/{MAX_ITEMS}
             </span>
@@ -398,12 +484,16 @@ export default function QuestionEditor({
                     type="text"
                     value={pair.left}
                     onChange={(e) => {
-                      const newPairs = [...question.matchPairs];
-                      newPairs[index] = { ...pair, left: e.target.value };
-                      handleMatchPairsChange(newPairs);
+                      const newValue = e.target.value;
+                      if (newValue.length <= MAX_OPTION_LENGTH) {
+                        const newPairs = [...question.matchPairs];
+                        newPairs[index] = { ...pair, left: newValue };
+                        handleMatchPairsChange(newPairs);
+                      }
                     }}
                     className="flex-1 w-full px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:focus:ring-blue-500 dark:focus:border-blue-500 text-gray-900 dark:text-white caret-blue-500 dark:caret-blue-400 placeholder:text-gray-500 dark:placeholder:text-gray-400 transition-all hover:border-gray-400 dark:hover:border-gray-500"
                     placeholder="Левая часть"
+                    maxLength={MAX_OPTION_LENGTH}
                   />
                   <span className="hidden sm:block text-gray-400 dark:text-gray-500">
                     →
@@ -412,12 +502,16 @@ export default function QuestionEditor({
                     type="text"
                     value={pair.right}
                     onChange={(e) => {
-                      const newPairs = [...question.matchPairs];
-                      newPairs[index] = { ...pair, right: e.target.value };
-                      handleMatchPairsChange(newPairs);
+                      const newValue = e.target.value;
+                      if (newValue.length <= MAX_OPTION_LENGTH) {
+                        const newPairs = [...question.matchPairs];
+                        newPairs[index] = { ...pair, right: newValue };
+                        handleMatchPairsChange(newPairs);
+                      }
                     }}
                     className="flex-1 w-full px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:focus:ring-blue-500 dark:focus:border-blue-500 text-gray-900 dark:text-white caret-blue-500 dark:caret-blue-400 placeholder:text-gray-500 dark:placeholder:text-gray-400 transition-all hover:border-gray-400 dark:hover:border-gray-500"
                     placeholder="Правая часть"
+                    maxLength={MAX_OPTION_LENGTH}
                   />
                 </div>
                 <button
@@ -463,15 +557,29 @@ export default function QuestionEditor({
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 relative pb-2">
         <div className="flex-1 space-y-4 w-full pr-10">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Текст вопроса
-            </label>
+            <div className="flex justify-between items-center mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Текст вопроса ({question.question.length}/{MAX_QUESTION_LENGTH})
+              </label>
+              <span className="text-sm font-medium px-2 py-1 rounded-md bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
+                {question.type === "single" && "Один вариант ответа"}
+                {question.type === "multiple" && "Множественный выбор"}
+                {question.type === "order" && "Порядок элементов"}
+                {question.type === "match" && "Сопоставление"}
+              </span>
+            </div>
             <textarea
               value={question.question}
-              onChange={(e) => handleTextChange(e.target.value)}
+              onChange={(e) => {
+                const newValue = e.target.value;
+                if (newValue.length <= MAX_QUESTION_LENGTH) {
+                  handleTextChange(newValue);
+                }
+              }}
               className="mt-1 block w-full px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:focus:ring-blue-500 dark:focus:border-blue-500 text-gray-900 dark:text-white caret-blue-500 dark:caret-blue-400 placeholder:text-gray-500 dark:placeholder:text-gray-400 resize-none transition-all hover:border-gray-400 dark:hover:border-gray-500"
               rows={3}
               placeholder="Введите текст вопроса"
+              maxLength={MAX_QUESTION_LENGTH}
             />
           </div>
 
@@ -531,9 +639,14 @@ export default function QuestionEditor({
             </label>
             <input
               type="number"
-              min="0"
+              min={MIN_POINTS}
               value={question.points}
-              onChange={(e) => handlePointsChange(Number(e.target.value))}
+              onChange={(e) => {
+                const value = Number(e.target.value);
+                if (value >= MIN_POINTS) {
+                  handlePointsChange(value);
+                }
+              }}
               className="block w-32 px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:focus:ring-blue-500 dark:focus:border-blue-500 text-gray-900 dark:text-white caret-blue-500 dark:caret-blue-400 transition-all hover:border-gray-400 dark:hover:border-gray-500"
             />
           </div>
@@ -541,7 +654,7 @@ export default function QuestionEditor({
         <button
           type="button"
           onClick={onRemove}
-          className="p-2 text-gray-400 hover:text-red-600 dark:text-gray-500 dark:hover:text-red-500 transition-colors rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 absolute top-0 right-0"
+          className="p-2 text-gray-400 hover:text-red-600 dark:text-gray-500 dark:hover:text-red-500 transition-colors rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 absolute top-0 right-0 -mt-1"
         >
           <FiTrash2 className="h-5 w-5" />
         </button>

@@ -13,7 +13,12 @@ type PopulatedTestDocument = Omit<TestDocument, "questions"> & {
   type: "quiz" | "test";
 };
 
-export default function TestPage({ params }: { params: { id: string } }) {
+type PageParams = {
+  params: Promise<{ id: string }>;
+};
+
+export default function TestPage({ params }: PageParams) {
+  const resolvedParams = use(params);
   const [test, setTest] = useState<PopulatedTestDocument | null>(null);
   const [answers, setAnswers] = useState<
     Record<string, string | string[] | Record<string, string>>
@@ -27,7 +32,7 @@ export default function TestPage({ params }: { params: { id: string } }) {
   useEffect(() => {
     const loadTest = async () => {
       try {
-        const res = await fetch(`/api/tests/${params.id}`);
+        const res = await fetch(`/api/tests/${resolvedParams.id}`);
         if (!res.ok) throw new Error("Тест не найден");
         const data: PopulatedTestDocument = await res.json();
         setTest(data);
@@ -36,7 +41,7 @@ export default function TestPage({ params }: { params: { id: string } }) {
       }
     };
     loadTest();
-  }, [params.id, router]);
+  }, [resolvedParams.id, router]);
 
   if (!test) return <div className="text-center p-8">Загрузка теста...</div>;
 
@@ -51,7 +56,7 @@ export default function TestPage({ params }: { params: { id: string } }) {
               {test.title}
             </h1>
             <TestComponent
-              testId={params.id}
+              testId={resolvedParams.id}
               questions={test.questions}
               answers={answers}
               onAnswersUpdate={setAnswers}

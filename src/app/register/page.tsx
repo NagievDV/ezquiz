@@ -84,7 +84,6 @@ export default function RegisterPage() {
           required
         />
 
-        {}
         <div className="w-full mb-3">
           <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
             Роль:

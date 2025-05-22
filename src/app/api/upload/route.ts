@@ -1,52 +1,51 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile } from 'fs/promises';
-import { join } from 'path';
-import { v4 as uuidv4 } from 'uuid';
+import { v2 as cloudinary } from 'cloudinary';
+import type { UploadApiOptions } from 'cloudinary';
+
+cloudinary.config({
+  cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+  secure: true,
+});
 
 export async function POST(request: NextRequest) {
   try {
-    const formData = await request.formData();
-    const file = formData.get('file') as File;
+    const { file } = await request.json();
 
     if (!file) {
       return NextResponse.json(
-        { error: 'No file uploaded' },
+        { error: 'No file provided' },
         { status: 400 }
       );
     }
 
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      return NextResponse.json(
-        { error: 'File must be an image' },
-        { status: 400 }
-      );
-    }
+    const uploadOptions: UploadApiOptions = {
+      folder: 'ezquiz',
+      resource_type: 'auto',
+      allowed_formats: ['jpg', 'png', 'jpeg', 'gif', 'webp'],
+      transformation: [
+        { width: 800, crop: 'limit' },
+        { quality: 'auto:good' },
+        { fetch_format: 'auto' }
+      ],
+      eager: [
+        { width: 400, crop: 'scale', quality: 'auto:good' },
+        { width: 800, crop: 'scale', quality: 'auto:good' }
+      ],
+      eager_async: true
+    };
 
-    // Validate file size (10MB max)
-    if (file.size > 10 * 1024 * 1024) {
-      return NextResponse.json(
-        { error: 'File size must be less than 10MB' },
-        { status: 400 }
-      );
-    }
+    const result = await cloudinary.uploader.upload(file, uploadOptions);
 
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
+    const headers = new Headers();
+    headers.set('Cache-Control', 'public, max-age=31536000, immutable');
 
-    // Generate unique filename
-    const uniqueId = uuidv4();
-    const extension = file.name.split('.').pop();
-    const filename = `${uniqueId}.${extension}`;
-
-    // Save to public/uploads directory
-    const path = join(process.cwd(), 'public', 'uploads', filename);
-    await writeFile(path, buffer);
-
-    // Return the URL
-    const url = `/uploads/${filename}`;
-
-    return NextResponse.json({ url });
+    return NextResponse.json({
+      url: result.secure_url,
+      publicId: result.public_id,
+      eager: result.eager
+    }, { headers });
   } catch (error) {
     console.error('Error handling file upload:', error);
     return NextResponse.json(

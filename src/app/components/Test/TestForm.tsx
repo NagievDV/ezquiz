@@ -8,7 +8,7 @@ import QuestionEditor from "./QuestionEditor";
 import Image from "next/image";
 import { CgAlbum } from "react-icons/cg";
 import { FiTrash2, FiPlus, FiX } from "react-icons/fi";
-import { uploadImage } from "@/libs/imageprocess";
+import { uploadImage } from "@/libs/imageUpload";
 import { toast } from "react-hot-toast";
 
 interface TestFormProps {
@@ -18,12 +18,13 @@ interface TestFormProps {
 
 interface PendingTag {
   name: string;
-  _id: string; // Временный ID для UI
+  _id: string;
 }
 
 const MAX_TAGS = 3;
+const MAX_TITLE_LENGTH = 50;
+const MAX_DESCRIPTION_LENGTH = 100;
 
-// Функция валидации вопроса
 const validateQuestion = (question: Question): string[] => {
   const errors: string[] = [];
 
@@ -37,28 +38,41 @@ const validateQuestion = (question: Question): string[] => {
       if (!question.options || question.options.length < 2) {
         errors.push("Добавьте минимум 2 варианта ответа");
       }
-      // Проверка на дубликаты вариантов ответа
+
       const trimmedOptions = question.options?.map((opt) => opt.trim()) || [];
       const uniqueOptions = new Set(trimmedOptions);
       if (uniqueOptions.size !== trimmedOptions.length) {
         errors.push("Варианты ответов должны быть уникальными");
+        return errors;
       }
-      if (question.type === "single" && !question.correctAnswer) {
-        errors.push("Выберите правильный ответ");
+
+      if (question.type === "single") {
+        if (
+          !question.correctAnswer ||
+          !question.options?.includes(question.correctAnswer)
+        ) {
+          errors.push("Выберите правильный ответ");
+        }
       }
-      if (
-        question.type === "multiple" &&
-        (!question.correctAnswer ||
-          (question.correctAnswer as string[]).length === 0)
-      ) {
-        errors.push("Выберите хотя бы один правильный ответ");
+
+      if (question.type === "multiple") {
+        const correctAnswers = question.correctAnswer as string[];
+        if (!correctAnswers || correctAnswers.length === 0) {
+          errors.push("Выберите хотя бы один правильный ответ");
+        } else {
+          const invalidAnswers = correctAnswers.filter(
+            (answer) => !question.options?.includes(answer)
+          );
+          if (invalidAnswers.length > 0) {
+            errors.push("Обнаружены недопустимые правильные ответы");
+          }
+        }
       }
       break;
     case "order":
       if (!question.order || question.order.length < 2) {
         errors.push("Добавьте минимум 2 элемента для сортировки");
       }
-      // Проверка на дубликаты элементов для сортировки
       const trimmedItems = question.order?.map((item) => item.trim()) || [];
       const uniqueItems = new Set(trimmedItems);
       if (uniqueItems.size !== trimmedItems.length) {
@@ -72,7 +86,6 @@ const validateQuestion = (question: Question): string[] => {
       if (!question.matchPairs || question.matchPairs.length < 2) {
         errors.push("Добавьте минимум 2 пары для сопоставления");
       }
-      // Проверка на дубликаты в левой и правой частях
       const leftParts =
         question.matchPairs?.map((pair) => pair.left.trim()) || [];
       const rightParts =
@@ -99,7 +112,6 @@ const validateQuestion = (question: Question): string[] => {
   return errors;
 };
 
-// Функция валидации всего теста
 const validateTest = (test: Test): { isValid: boolean; errors: string[] } => {
   const errors: string[] = [];
 
@@ -155,11 +167,6 @@ export default function TestForm({
     fetchTags();
   }, []);
 
-  useEffect(() => {
-    // Очищаем pendingTags при инициализации и изменении test.tags
-    setPendingTags([]);
-  }, [test.tags]);
-
   const fetchTags = async (search?: string) => {
     try {
       setIsLoadingTags(true);
@@ -171,7 +178,7 @@ export default function TestForm({
       const data = await response.json();
       setAvailableTags(data);
     } catch (error) {
-      console.error("Error fetching tags:", error);
+      console.error("Ошибка при получении тегов:", error);
     } finally {
       setIsLoadingTags(false);
     }
@@ -199,18 +206,18 @@ export default function TestForm({
       return;
     }
 
-    const isExistingTag =
-      test.tags.some((tag) => tag._id === tagToAdd._id) ||
-      pendingTags.some(
-        (tag) => tag.name.toLowerCase() === tagToAdd.name.toLowerCase()
-      );
+    const isExistingTag = test.tags.some(
+      (tag) =>
+        tag._id === tagToAdd._id ||
+        tag.name.toLowerCase() === tagToAdd.name.toLowerCase()
+    );
 
-    if (!isExistingTag) {
-      if (
-        "_id" in tagToAdd &&
-        typeof tagToAdd._id === "string" &&
-        tagToAdd._id.startsWith("pending_")
-      ) {
+    const isPendingTag = pendingTags.some(
+      (tag) => tag.name.toLowerCase() === tagToAdd.name.toLowerCase()
+    );
+
+    if (!isExistingTag && !isPendingTag) {
+      if ("_id" in tagToAdd && tagToAdd._id.startsWith("pending_")) {
         setPendingTags((prev) => [...prev, tagToAdd as PendingTag]);
       } else {
         setTest((prev) => ({
@@ -218,9 +225,11 @@ export default function TestForm({
           tags: [...prev.tags, tagToAdd as Tag],
         }));
       }
+      setError(null);
+    } else {
+      setError("Этот тег уже добавлен");
     }
     setTagInput("");
-    setError(null);
   };
 
   const addPendingTag = () => {
@@ -232,7 +241,6 @@ export default function TestForm({
     const normalizedInput = tagInput.trim();
     if (!normalizedInput) return;
 
-    // Проверяем, не существует ли уже такой тег
     const existingTag = availableTags.find(
       (tag) => tag.name.toLowerCase() === normalizedInput.toLowerCase()
     );
@@ -260,6 +268,7 @@ export default function TestForm({
         tags: prev.tags.filter((tag) => tag._id !== tagId),
       }));
     }
+    setError(null);
   };
 
   const createNewTags = async () => {
@@ -273,13 +282,13 @@ export default function TestForm({
           body: JSON.stringify({ name: pendingTag.name.toLowerCase() }),
         });
 
-        if (!response.ok) throw new Error("Failed to create tag");
+        if (!response.ok) throw new Error("Не удалось создать тег");
 
         const newTag = await response.json();
         createdTags.push(newTag);
       } catch (error) {
-        console.error("Error creating tag:", error);
-        throw new Error(`Failed to create tag: ${pendingTag.name}`);
+        console.error("Ошибка при создании тега:", error);
+        throw new Error(`Не удалось создать тег: ${pendingTag.name}`);
       }
     }
 
@@ -302,7 +311,7 @@ export default function TestForm({
       setTest((prev) => ({ ...prev, imageUrl: url }));
       setImagePreview(url);
     } catch (error) {
-      console.error("Error uploading image:", error);
+      console.error("Ошибка при загрузке изображения:", error);
       setError(
         "Ошибка при загрузке изображения. Пожалуйста, попробуйте еще раз."
       );
@@ -350,7 +359,7 @@ export default function TestForm({
         };
         break;
       default:
-        throw new Error("Unsupported question type");
+        throw new Error("Неподдерживаемый тип вопроса");
     }
 
     setTest((prev) => ({
@@ -385,7 +394,6 @@ export default function TestForm({
 
     const validation = validateTest(test);
     if (!validation.isValid) {
-      // Сначала показываем общие ошибки теста
       const generalErrors = validation.errors.filter(
         (err) => !err.startsWith("Вопрос")
       );
@@ -393,16 +401,13 @@ export default function TestForm({
         err.startsWith("Вопрос")
       );
 
-      // Показываем ошибки в правильном порядке
       generalErrors.forEach((error) => {
         toast.error(error);
       });
 
-      // Группируем ошибки по вопросам и показываем их последовательно
       let currentQuestionErrors: string[] = [];
       questionErrors.forEach((error) => {
         if (error.startsWith("Вопрос")) {
-          // Если это новый вопрос, показываем предыдущие ошибки
           if (currentQuestionErrors.length > 0) {
             toast.error(currentQuestionErrors.join("\n"));
             currentQuestionErrors = [];
@@ -412,7 +417,7 @@ export default function TestForm({
           currentQuestionErrors.push(error);
         }
       });
-      // Показываем ошибки последнего вопроса
+
       if (currentQuestionErrors.length > 0) {
         toast.error(currentQuestionErrors.join("\n"));
       }
@@ -423,7 +428,6 @@ export default function TestForm({
       setIsSubmitting(true);
       setError(null);
 
-      // Создаем новые теги, если есть
       let finalTags = [...test.tags];
       if (pendingTags.length > 0) {
         const createdTags = await createNewTags();
@@ -433,7 +437,7 @@ export default function TestForm({
       const finalTest = {
         ...test,
         tags: finalTags,
-        author: user.id, // Добавляем ID пользователя
+        author: user.id,
       };
 
       const url = isEditing ? `/api/tests/${initialData?._id}` : "/api/tests";
@@ -450,7 +454,7 @@ export default function TestForm({
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to save test");
+        throw new Error(data.error || "Не удалось сохранить тест");
       }
 
       toast.success(
@@ -458,7 +462,7 @@ export default function TestForm({
       );
       router.push("/profile");
     } catch (error) {
-      console.error("Error saving test:", error);
+      console.error("Ошибка при сохранении теста:", error);
       if (error instanceof Error) {
         toast.error(error.message);
       } else {
@@ -486,32 +490,40 @@ export default function TestForm({
           <div className="grid grid-cols-1 gap-8">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Название теста
+                Название теста ({test.title.length}/{MAX_TITLE_LENGTH})
               </label>
               <input
                 type="text"
                 value={test.title}
-                onChange={(e) =>
-                  setTest((prev) => ({ ...prev, title: e.target.value }))
-                }
+                onChange={(e) => {
+                  const newValue = e.target.value;
+                  if (newValue.length <= MAX_TITLE_LENGTH) {
+                    setTest((prev) => ({ ...prev, title: newValue }));
+                  }
+                }}
                 className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white transition-colors"
                 placeholder="Введите название теста"
+                maxLength={MAX_TITLE_LENGTH}
                 required
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Описание
+                Описание ({test.description.length}/{MAX_DESCRIPTION_LENGTH})
               </label>
               <textarea
                 value={test.description}
-                onChange={(e) =>
-                  setTest((prev) => ({ ...prev, description: e.target.value }))
-                }
+                onChange={(e) => {
+                  const newValue = e.target.value;
+                  if (newValue.length <= MAX_DESCRIPTION_LENGTH) {
+                    setTest((prev) => ({ ...prev, description: newValue }));
+                  }
+                }}
                 className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white transition-colors"
                 rows={4}
                 placeholder="Опишите, о чем этот тест"
+                maxLength={MAX_DESCRIPTION_LENGTH}
                 required
               />
             </div>

@@ -8,7 +8,6 @@ import { FiArrowLeft } from "react-icons/fi";
 import Link from "next/link";
 import { Test } from "@/types/test";
 
-// Создаем отдельный компонент для контента
 function CreateTestContent() {
   const { user } = useAuth();
   const router = useRouter();
@@ -32,12 +31,12 @@ function CreateTestContent() {
     try {
       const response = await fetch(`/api/tests/${testId}`);
       if (!response.ok) {
-        throw new Error("Failed to fetch test");
+        throw new Error("Не удалось получить тест");
       }
       const data = await response.json();
       setTest(data);
     } catch (error) {
-      console.error("Error fetching test:", error);
+      console.error("Ошибка при получении теста:", error);
     } finally {
       setIsLoading(false);
     }
@@ -80,7 +79,6 @@ function CreateTestContent() {
   );
 }
 
-// Основной компонент страницы с Suspense
 export default function CreateTestPage() {
   return (
     <Suspense

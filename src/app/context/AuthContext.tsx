@@ -35,18 +35,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<UserData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // 1. Упрощенная валидация
   const validateUserData = (data: any): data is UserData => {
-    return (
-      data &&
-      data.id && // Теперь проверяем только id
-      data.name &&
-      data.email &&
-      data.role
-    );
+    return data && data.id && data.name && data.email && data.role;
   };
 
-  // 2. Восстановление сохранения в localStorage
   useEffect(() => {
     const savedUser = localStorage.getItem("user");
     if (savedUser) {
@@ -61,17 +53,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           });
         }
       } catch (error) {
-        console.error("Error parsing user data:", error);
+        console.error("Ошибка при парсинге данных пользователя:", error);
         localStorage.removeItem("user");
       }
     }
     setIsLoading(false);
   }, []);
 
-  // 3. Гарантированное сохранение при логине
   const login = useCallback((rawData: any) => {
     const userData = {
-      id: rawData.id || rawData._id, // Поддерживаем оба варианта при входе, но сохраняем как id
+      id: rawData.id || rawData._id,
       name: rawData.name,
       email: rawData.email,
       role: rawData.role,
@@ -81,7 +72,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     localStorage.setItem("user", JSON.stringify(userData));
   }, []);
 
-  // 4. Гарантированная очистка при логауте
   const logout = useCallback(() => {
     setUser(null);
     localStorage.removeItem("user");

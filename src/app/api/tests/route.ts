@@ -58,7 +58,7 @@ export async function GET(req: NextRequest) {
       }
     });
   } catch (error) {
-    console.error("❌ Ошибка при получении тестов:", error);
+    console.error("Ошибка при получении тестов:", error);
     return NextResponse.json(
       { error: "Ошибка при получении тестов", details: error },
       { status: 500 }
@@ -73,7 +73,6 @@ export async function POST(req: NextRequest) {
     const data = await req.json();
     const { title, description, type, tags, author, questions, imageUrl } = data;
 
-    // Validate required fields
     if (!title || !description || !type || !author) {
       return NextResponse.json(
         { error: "Отсутствуют обязательные поля" },
@@ -81,7 +80,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // First, create all questions
     const questionIds = [];
     if (questions && Array.isArray(questions)) {
       for (const question of questions) {
@@ -90,7 +88,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Create the test with question IDs
     const testData = {
       title,
       description,
@@ -110,9 +107,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(populatedTest, { status: 201 });
   } catch (error) {
-    console.error("Error creating test:", error);
+    console.error("Ошибка при создании теста:", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to create test" },
+      { error: error instanceof Error ? error.message : "Не удалось создать тест" },
       { status: 500 }
     );
   }
@@ -140,7 +137,7 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json(updatedTest);
   } catch (error) {
-    console.error("❌ Ошибка при обновлении теста:", error);
+    console.error("Ошибка при обновлении теста:", error);
     return NextResponse.json({ error: "Ошибка при обновлении теста", details: error }, { status: 500 });
   }
 }
@@ -172,7 +169,7 @@ export async function PUT(req: NextRequest) {
 
     return NextResponse.json(updatedTest);
   } catch (error) {
-    console.error("❌ Ошибка при обновлении теста:", error);
+    console.error("Ошибка при обновлении теста:", error);
     return NextResponse.json({ error: "Ошибка при обновлении теста", details: error }, { status: 500 });
   }
 }

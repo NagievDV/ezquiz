@@ -8,7 +8,6 @@ import {
 } from "@hello-pangea/dnd";
 import { IoReorderThreeOutline } from "react-icons/io5";
 
-// Функция для перемешивания массива
 function shuffleArray<T>(array: T[]): T[] {
   const newArray = [...array];
   for (let i = newArray.length - 1; i > 0; i--) {
@@ -31,7 +30,6 @@ export default function OrderQuestion({
 }: OrderQuestionProps) {
   const [items, setItems] = useState<string[]>(() => {
     if (Array.isArray(answer) && answer.length > 0) return answer;
-    // Используем order для отображения и перемешиваем его, только если элементы не пустые
     const nonEmptyItems = (question.order || []).filter(
       (item) => item.trim() !== ""
     );
@@ -44,7 +42,6 @@ export default function OrderQuestion({
     if (Array.isArray(answer) && answer.length > 0) {
       setItems(answer);
     } else if (question.order?.length >= 2 && items.length === 0) {
-      // Перемешиваем только если есть минимум 2 непустых элемента
       const nonEmptyItems = question.order.filter((item) => item.trim() !== "");
       setItems(
         nonEmptyItems.length >= 2
@@ -65,7 +62,6 @@ export default function OrderQuestion({
     onAnswerChange(newItems);
   };
 
-  // Функция для перемещения элемента вверх
   const moveUp = (index: number) => {
     if (index === 0) return;
     const newItems = [...items];
@@ -77,7 +73,6 @@ export default function OrderQuestion({
     onAnswerChange(newItems);
   };
 
-  // Функция для перемещения элемента вниз
   const moveDown = (index: number) => {
     if (index === items.length - 1) return;
     const newItems = [...items];
@@ -90,8 +85,8 @@ export default function OrderQuestion({
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow-lg">
-      <h3 className="text-lg sm:text-xl font-semibold mb-4 dark:text-gray-200">
+    <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
+      <h3 className="text-xl font-semibold mb-4 dark:text-gray-200 whitespace-pre-wrap break-words">
         {question.question}
       </h3>
 

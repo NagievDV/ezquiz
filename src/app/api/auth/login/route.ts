@@ -1,10 +1,8 @@
-// src/app/api/auth/login/route.ts
 import { NextResponse } from "next/server";
 import User from "@/models/User";
 import bcrypt from "bcryptjs";
 import { connectDB } from "@/libs/mongodb";
 
-// Обработчик POST-запросов
 export async function POST(request: Request) {
   try {
     const { email, password } = await request.json();
@@ -36,7 +34,6 @@ export async function POST(request: Request) {
   }
 }
 
-// Запретите другие методы
 export async function GET() {
   return NextResponse.json(
     { error: "Метод GET не поддерживается" },

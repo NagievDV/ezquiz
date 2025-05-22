@@ -9,14 +9,14 @@ export async function GET(request: Request) {
 
   if (!userId) {
     return NextResponse.json(
-      { error: "User ID is required" },
+      { error: "Требуется ID пользователя" },
       { status: 400 }
     );
   }
 
   if (!mongoose.Types.ObjectId.isValid(userId)) {
     return NextResponse.json(
-      { error: "Invalid user ID format" },
+      { error: "Неверный формат ID пользователя" },
       { status: 400 }
     );
   }
@@ -43,9 +43,9 @@ export async function GET(request: Request) {
     });
 
   } catch (error) {
-    console.error("Error fetching user stats:", error);
+    console.error("Ошибка при получении статистики пользователя:", error);
     return NextResponse.json(
-      { error: "Failed to fetch statistics", details: error instanceof Error ? error.message : String(error) },
+      { error: "Не удалось получить статистику", details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }

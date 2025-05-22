@@ -38,7 +38,6 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // Создаем функцию для получения информации о теге по его ID
   const getTagInfo = (tagId: string): Tag | undefined => {
     return tags.find((tag) => tag._id === tagId);
   };

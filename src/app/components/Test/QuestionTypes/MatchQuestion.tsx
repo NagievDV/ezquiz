@@ -68,7 +68,6 @@ export default function MatchQuestion({
     onAnswerChange(newAnswer);
   };
 
-  // Функция для перемещения элемента вверх
   const moveUp = (index: number) => {
     if (index === 0) return;
     const newItems = [...rightItems];
@@ -84,7 +83,6 @@ export default function MatchQuestion({
     onAnswerChange(newAnswer);
   };
 
-  // Функция для перемещения элемента вниз
   const moveDown = (index: number) => {
     if (index === rightItems.length - 1) return;
     const newItems = [...rightItems];
@@ -101,13 +99,12 @@ export default function MatchQuestion({
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow-lg">
-      <h3 className="text-lg sm:text-xl font-semibold mb-4 dark:text-gray-200">
+    <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
+      <h3 className="text-xl font-semibold mb-4 dark:text-gray-200 whitespace-pre-wrap break-words">
         {question.question}
       </h3>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-        {/* Левая колонка (фиксированная) */}
         <div className="space-y-2 w-full">
           {matchPairs.map((pair, index) => (
             <div
@@ -124,7 +121,6 @@ export default function MatchQuestion({
           ))}
         </div>
 
-        {/* Правая колонка (перетаскиваемая) */}
         <DragDropContext onDragEnd={handleDragEnd}>
           <Droppable droppableId="droppable">
             {(provided) => (

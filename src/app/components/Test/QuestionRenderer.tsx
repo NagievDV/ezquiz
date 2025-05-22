@@ -4,7 +4,6 @@ import MultipleQuestion from "./QuestionTypes/MultipleQuestion";
 import OrderQuestion from "./QuestionTypes/OrderQuestion";
 import MatchQuestion from "./QuestionTypes/MatchQuestion";
 import Image from "next/image";
-import { useState } from "react";
 
 interface QuestionRendererProps {
   question: QuestionDocument;
@@ -12,7 +11,6 @@ interface QuestionRendererProps {
   onAnswerChange: (value: string | string[] | Record<string, string>) => void;
 }
 
-// Компонент для отображения изображения вопроса
 const QuestionImage = ({ imageUrl }: { imageUrl: string }) => (
   <div className="flex justify-center mb-4">
     <div className="relative w-full flex justify-center">

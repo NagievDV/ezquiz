@@ -9,7 +9,6 @@ export async function POST(req: NextRequest) {
   try {
     const { userId, testId, answers, score, maxScore } = await req.json();
 
-    // 1. Создаем запись результата
     const result = await UserResult.create({
       user: userId,
       test: testId,
@@ -17,14 +16,12 @@ export async function POST(req: NextRequest) {
       maxScore
     });
 
-    // 2. Преобразуем ответы в правильный формат
     const answerRecords = Object.entries(answers).map(([questionId, answer]) => ({
       resultId: result._id,
       questionId,
       userAnswer: answer
     }));
 
-    // 3. Сохраняем ответы с обработкой ошибок
     if (answerRecords.length > 0) {
       await UserAnswer.insertMany(answerRecords);
     }

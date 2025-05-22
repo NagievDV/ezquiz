@@ -20,7 +20,7 @@ export default function MultipleQuestion({
 
   return (
     <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
-      <h3 className="text-xl font-semibold mb-4 dark:text-gray-200">
+      <h3 className="text-xl font-semibold mb-4 dark:text-gray-200 whitespace-pre-wrap break-words">
         {question.question}
       </h3>
 

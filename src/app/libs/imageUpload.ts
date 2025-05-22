@@ -1,82 +1,38 @@
-// Утилита для работы с изображениями
+import { uploadToCloudinary, deleteFromCloudinary } from './cloudinary';
+
 export const uploadImage = async (file: File): Promise<string> => {
   try {
-    console.log('Starting image upload process...', { fileName: file.name, fileSize: file.size });
+    console.log('Начало процесса загрузки изображения...', { fileName: file.name, fileSize: file.size });
 
-    // Проверяем размер файла (максимум 10MB)
     if (file.size > 10 * 1024 * 1024) {
-      throw new Error('File size exceeds 10MB limit');
+      throw new Error('Размер файла превышает 10MB');
     }
 
-    // Проверяем тип файла
     if (!file.type.startsWith('image/')) {
-      throw new Error('File must be an image');
+      throw new Error('Файл должен быть изображением');
     }
 
-    // Создаем FormData для отправки файла
-    const formData = new FormData();
-    formData.append('file', file);
-
-    console.log('Sending request to upload endpoint...');
-
-    // Загружаем изображение через наш API
-    const response = await fetch('/api/upload', {
-      method: 'POST',
-      body: formData,
-    });
-
-    console.log('Upload response received:', { 
-      status: response.status,
-      statusText: response.statusText
-    });
-
-    const responseData = await response.json();
-
-    if (!response.ok) {
-      console.error('Upload failed:', responseData);
-      throw new Error(responseData.error || `Upload failed with status ${response.status}`);
-    }
-
-    if (!responseData.url) {
-      console.error('Invalid response format:', responseData);
-      throw new Error('Server response missing URL');
-    }
-
-    console.log('Upload successful:', { url: responseData.url });
-    return responseData.url;
+    console.log('Загрузка в Cloudinary...');
+    const url = await uploadToCloudinary(file);
+    
+    console.log('Загрузка прошла успешно:', { url });
+    return url;
   } catch (error) {
-    console.error('Error in uploadImage:', error);
+    console.error('Ошибка в uploadImage:', error);
     throw error;
   }
 };
 
-export const deleteImage = async (filename: string): Promise<void> => {
+export const deleteImage = async (url: string): Promise<void> => {
   try {
-    console.log('Attempting to delete image:', { filename });
+    console.log('Попытка удалить изображение:', { url });
 
-    const response = await fetch('/api/delete-image', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ filename }),
-    });
-
-    console.log('Delete response received:', { 
-      status: response.status,
-      statusText: response.statusText
-    });
-
-    const responseData = await response.json();
-
-    if (!response.ok) {
-      console.error('Delete failed:', responseData);
-      throw new Error(responseData.error || `Delete failed with status ${response.status}`);
-    }
-
-    console.log('Image deleted successfully');
+    const publicId = url.split('/').slice(-2).join('/').split('.')[0];
+    
+    await deleteFromCloudinary(publicId);
+    console.log('Изображение удалено успешно');
   } catch (error) {
-    console.error('Error in deleteImage:', error);
+    console.error('Ошибка в deleteImage:', error);
     throw error;
   }
 }; 

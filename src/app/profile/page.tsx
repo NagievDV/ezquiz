@@ -98,7 +98,7 @@ export default function ProfilePage() {
         setAuthorTests(data.results);
         setAuthorTestsPagination(data.pagination);
       } catch (error) {
-        console.error("❌ Error loading author tests:", error);
+        console.error("Ошибка при загрузке тестов:", error);
         setError(
           error instanceof Error
             ? error.message
@@ -119,15 +119,12 @@ export default function ProfilePage() {
       setError(null);
 
       try {
-        console.log("📤 Calling API with userId:", user.id);
         const apiUrl = `/api/users/results?userId=${user.id}&page=${page}`;
         const res = await fetch(apiUrl);
         const data = await res.json();
 
-        console.log("📥 API Response:", { status: res.status, data });
-
         if (!res.ok) {
-          console.error("❌ Failed to load test history:", {
+          console.error("Ошибка при загрузке истории тестов", {
             status: res.status,
             data,
           });
@@ -140,7 +137,7 @@ export default function ProfilePage() {
         }
 
         if (!data || !Array.isArray(data.results)) {
-          console.error("❌ Invalid response format:", data);
+          console.error("Неверный формат данных от сервера", data);
           throw new Error("Неверный формат данных от сервера");
         }
 
@@ -155,7 +152,7 @@ export default function ProfilePage() {
         );
         setError(null);
       } catch (error) {
-        console.error("❌ Error in loadTestHistory:", error);
+        console.error("Ошибка при загрузке истории тестов", error);
         setError(
           error instanceof Error
             ? error.message
@@ -174,7 +171,6 @@ export default function ProfilePage() {
 
     const loadData = async () => {
       try {
-        // Загрузка статистики
         const statsRes = await fetch(`/api/users/stats?userId=${user.id}`);
         const statsData = await statsRes.json();
 
@@ -188,14 +184,13 @@ export default function ProfilePage() {
           isLoading: false,
         });
 
-        // Загрузка данных в зависимости от роли
         if (user.role === "teacher") {
           await loadAuthorTests(1);
         } else {
           await loadTestHistory(1);
         }
       } catch (error) {
-        console.error("❌ Error loading stats:", error);
+        console.error("Ошибка при загрузке статистики", error);
         setStats((prev) => ({ ...prev, isLoading: false }));
       }
     };
@@ -216,6 +211,10 @@ export default function ProfilePage() {
       prevTests.filter((test) => test._id !== deletedTestId)
     );
     router.refresh();
+  };
+
+  const handleRetakeTest = (testId: string) => {
+    router.push(`/test/${testId}`);
   };
 
   const roleTranslations = {
@@ -246,16 +245,13 @@ export default function ProfilePage() {
     const pages = [];
     const maxVisiblePages = window.innerWidth < 640 ? 3 : 5;
 
-    // Всегда показываем первую страницу
     pages.push(renderPageButton(1));
 
     if (totalPages <= maxVisiblePages) {
-      // Если страниц мало, показываем все
       for (let i = 2; i <= totalPages; i++) {
         pages.push(renderPageButton(i));
       }
     } else {
-      // Вычисляем диапазон видимых страниц
       let startPage = Math.max(
         2,
         currentPage - Math.floor(maxVisiblePages / 2)
@@ -265,14 +261,12 @@ export default function ProfilePage() {
         currentPage + Math.floor(maxVisiblePages / 2)
       );
 
-      // Корректируем диапазон, если текущая страница близка к краям
       if (currentPage <= Math.floor(maxVisiblePages / 2) + 1) {
         endPage = maxVisiblePages - 1;
       } else if (currentPage >= totalPages - Math.floor(maxVisiblePages / 2)) {
         startPage = totalPages - (maxVisiblePages - 2);
       }
 
-      // Добавляем троеточие в начале, если нужно
       if (startPage > 2) {
         pages.push(
           <span
@@ -284,12 +278,10 @@ export default function ProfilePage() {
         );
       }
 
-      // Добавляем страницы из диапазона
       for (let i = startPage; i <= endPage; i++) {
         pages.push(renderPageButton(i));
       }
 
-      // Добавляем троеточие в конце, если нужно
       if (endPage < totalPages - 1) {
         pages.push(
           <span
@@ -301,7 +293,6 @@ export default function ProfilePage() {
         );
       }
 
-      // Всегда показываем последнюю страницу
       if (totalPages > 1) {
         pages.push(renderPageButton(totalPages));
       }
@@ -309,7 +300,6 @@ export default function ProfilePage() {
 
     return (
       <div className="flex justify-center items-center gap-1 mt-6 flex-wrap">
-        {/* Кнопка "Назад" */}
         <button
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
@@ -324,7 +314,6 @@ export default function ProfilePage() {
 
         {pages}
 
-        {/* Кнопка "Вперед" */}
         <button
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
@@ -415,7 +404,6 @@ export default function ProfilePage() {
       );
     }
 
-    // Контент для студента (история тестов)
     return (
       <div>
         <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">
@@ -450,6 +438,13 @@ export default function ProfilePage() {
                         Пройден: {date.toLocaleDateString()} в{" "}
                         {date.toLocaleTimeString()}
                       </p>
+                      <button
+                        onClick={() => handleRetakeTest(result.test._id)}
+                        className="mt-2 flex items-center gap-2 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors group"
+                      >
+                        <TbRefresh className="w-5 h-5 transition-transform group-hover:rotate-180 duration-500" />
+                        <span className="text-sm">Пройти заново</span>
+                      </button>
                     </div>
                     <div className="flex flex-col items-center min-w-[100px]">
                       <div className="text-2xl font-bold text-gray-800 dark:text-gray-200">

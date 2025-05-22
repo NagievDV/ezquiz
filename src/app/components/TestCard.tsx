@@ -48,18 +48,18 @@ export default function TestCard({
       });
 
       if (!response.ok) {
-        throw new Error("Failed to delete test");
+        const data = await response.json();
+        throw new Error(data.error || "Не удалось удалить тест");
       }
 
       onDelete?.();
       setShowDeleteModal(false);
     } catch (error) {
-      console.error("Error deleting test:", error);
-      // Здесь можно добавить отображение ошибки пользователю
+      console.error("Ошибка при удалении теста:", error);
+      alert(error instanceof Error ? error.message : "Не удалось удалить тест");
     }
   };
 
-  // Use the image URL directly since we're not using Cloudinary anymore
   const optimizedImageUrl = imageUrl && !imageError ? imageUrl : null;
 
   return (
@@ -96,9 +96,11 @@ export default function TestCard({
           </div>
         </div>
 
-        <div className="px-6 py-4 flex-1">
-          <h3 className="font-bold text-xl mb-2 dark:text-white">{title}</h3>
-          <p className="text-gray-700 dark:text-gray-300 text-base line-clamp-3">
+        <div className="px-6 py-4">
+          <h2 className="font-bold text-xl mb-2 text-gray-900 dark:text-white line-clamp-2 break-words">
+            {title}
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400 text-base line-clamp-3 break-words">
             {description}
           </p>
         </div>

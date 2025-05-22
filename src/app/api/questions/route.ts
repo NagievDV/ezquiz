@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
     const questions = await Question.find(filter);
     return NextResponse.json(questions);
   } catch (err) {
-    return NextResponse.json({ error: "Failed to fetch questions" }, { status: 500 });
+    return NextResponse.json({ error: "Не удалось получить вопросы" }, { status: 500 });
   }
 }
 
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
     const newQuestion = await Question.create(data);
     return NextResponse.json(newQuestion, { status: 201 });
   } catch (error) {
-    console.error("Error creating question:", error);
-    return NextResponse.json({ error: "Failed to create question" }, { status: 500 });
+    console.error("Ошибка при создании вопроса:", error);
+    return NextResponse.json({ error: "Не удалось создать вопрос" }, { status: 500 });
   }
 }

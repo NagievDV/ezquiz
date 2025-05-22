@@ -3,24 +3,31 @@ import { connectDB } from "@/libs/mongodb";
 import { Types } from "mongoose";
 import Test from "@/models/Test";
 import Question from "@/models/Question";
-import { deleteImage } from "@/libs/imageprocess";
+import { v2 as cloudinary } from 'cloudinary';
 
-// Define the params type
+cloudinary.config({
+  cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+  secure: true,
+});
+
 type RouteParams = { params: { id: string } }
 
 export async function GET(
   request: NextRequest,
-  context: RouteParams
+  { params }: RouteParams
 ) {
   try {
-    if (!context.params?.id) {
+    const { id } = params;
+    if (!id) {
       return NextResponse.json(
         { error: "Не указан ID теста" },
         { status: 400 }
       );
     }
 
-    if (!Types.ObjectId.isValid(context.params.id)) {
+    if (!Types.ObjectId.isValid(id)) {
       return NextResponse.json(
         { error: "Неверный формат ID теста" },
         { status: 400 }
@@ -29,7 +36,7 @@ export async function GET(
 
     await connectDB();
     
-    const test = await Test.findById(context.params.id)
+    const test = await Test.findById(id)
       .populate({
         path: "questions",
         model: Question,
@@ -62,17 +69,18 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  context: RouteParams
+  { params }: RouteParams
 ) {
   try {
-    if (!context.params?.id) {
+    const { id } = params;
+    if (!id) {
       return NextResponse.json(
         { error: "Не указан ID теста" },
         { status: 400 }
       );
     }
 
-    if (!Types.ObjectId.isValid(context.params.id)) {
+    if (!Types.ObjectId.isValid(id)) {
       return NextResponse.json(
         { error: "Неверный формат ID теста" },
         { status: 400 }
@@ -115,7 +123,7 @@ export async function PUT(
     };
 
     const updatedTest = await Test.findByIdAndUpdate(
-      context.params.id,
+      id,
       updateData,
       { new: true }
     ).populate({
@@ -147,12 +155,27 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  context: RouteParams
+  { params }: RouteParams
 ) {
   try {
+    const { id } = params;
+    if (!id) {
+      return NextResponse.json(
+        { error: "Не указан ID теста" },
+        { status: 400 }
+      );
+    }
+
+    if (!Types.ObjectId.isValid(id)) {
+      return NextResponse.json(
+        { error: "Неверный формат ID теста" },
+        { status: 400 }
+      );
+    }
+
     await connectDB();
 
-    const test = await Test.findById(context.params.id).populate({
+    const test = await Test.findById(id).populate({
       path: "questions",
       model: Question,
       select: "imageUrl"
@@ -160,23 +183,27 @@ export async function DELETE(
 
     if (!test) {
       return NextResponse.json(
-        { error: "Test not found" },
+        { error: "Тест не найден" },
         { status: 404 }
       );
     }
 
     if (test.imageUrl) {
-      const filename = test.imageUrl.split("/").pop();
-      if (filename) {
-        await deleteImage(filename);
+      const publicId = test.imageUrl.split('/').slice(-2).join('/').split('.')[0];
+      try {
+        await cloudinary.uploader.destroy(publicId);
+      } catch (error) {
+        console.error('Ошибка при удалении изображения теста:', error);
       }
     }
 
     for (const question of test.questions) {
       if (question.imageUrl) {
-        const filename = question.imageUrl.split("/").pop();
-        if (filename) {
-          await deleteImage(filename);
+        const publicId = question.imageUrl.split('/').slice(-2).join('/').split('.')[0];
+        try {
+          await cloudinary.uploader.destroy(publicId);
+        } catch (error) {
+          console.error('Ошибка при удалении изображения вопроса:', error);
         }
       }
     }
@@ -187,13 +214,13 @@ export async function DELETE(
       } 
     });
 
-    await Test.findByIdAndDelete(context.params.id);
+    await Test.findByIdAndDelete(id);
 
-    return NextResponse.json({ message: "Test deleted successfully" });
+    return NextResponse.json({ message: "Тест удален успешно" });
   } catch (error) {
-    console.error("Error deleting test:", error);
+    console.error("Ошибка при удалении теста:", error);
     return NextResponse.json(
-      { error: "Failed to delete test" },
+      { error: "Не удалось удалить тест" },
       { status: 500 }
     );
   }

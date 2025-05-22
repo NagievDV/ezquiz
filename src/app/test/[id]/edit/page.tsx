@@ -34,7 +34,7 @@ export default function EditTestPage({ params }: EditTestPageProps) {
         const data = await response.json();
         setTest(data);
       } catch (error) {
-        console.error("Error fetching test:", error);
+        console.error("Ошибка при загрузке теста:", error);
         setError("Произошла ошибка при загрузке теста");
       } finally {
         setIsLoading(false);

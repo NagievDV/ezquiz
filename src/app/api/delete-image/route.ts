@@ -1,30 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { unlink } from 'fs/promises';
-import { join } from 'path';
+import { v2 as cloudinary } from 'cloudinary';
+
+cloudinary.config({
+  cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+  secure: true,
+});
 
 export async function POST(request: NextRequest) {
   try {
-    const { filename } = await request.json();
+    const { publicId } = await request.json();
 
-    // Проверяем, что filename не пустой и не содержит подозрительных символов
-    if (!filename || filename.includes('..') || filename.includes('/')) {
+    if (!publicId) {
       return NextResponse.json(
-        { error: 'Invalid filename' },
+        { error: 'Не предоставлен public ID' },
         { status: 400 }
       );
     }
 
-    // Путь к файлу в uploads директории
-    const filepath = join(process.cwd(), 'public', 'uploads', filename);
+    const result = await cloudinary.uploader.destroy(publicId);
 
-    // Удаляем файл
-    await unlink(filepath);
-
-    return NextResponse.json({ message: 'File deleted successfully' });
+    if (result.result === 'ok') {
+      return NextResponse.json({ message: 'Изображение удалено успешно' });
+    } else {
+      return NextResponse.json(
+        { error: 'Не удалось удалить изображение' },
+        { status: 500 }
+      );
+    }
   } catch (error) {
-    console.error('Error deleting file:', error);
+    console.error('Ошибка при удалении файла:', error);
     return NextResponse.json(
-      { error: 'Failed to delete file' },
+      { error: 'Не удалось удалить файл' },
       { status: 500 }
     );
   }

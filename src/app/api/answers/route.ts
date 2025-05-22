@@ -19,8 +19,8 @@ export async function GET(req: NextRequest) {
     const answers = await UserAnswer.find(filter);
     return NextResponse.json(answers);
   } catch (error) {
-    console.error("Error fetching user answers:", error);
-    return NextResponse.json({ error: "Failed to fetch answers" }, { status: 500 });
+    console.error("Ошибка при получении ответов:", error);
+    return NextResponse.json({ error: "Не удалось получить ответы" }, { status: 500 });
   }
 }
 
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(created, { status: 201 });
   } catch (error) {
-    console.error("Error saving user answers:", error);
-    return NextResponse.json({ error: "Failed to save answers" }, { status: 500 });
+    console.error("Ошибка при сохранении ответов:", error);
+    return NextResponse.json({ error: "Не удалось сохранить ответы" }, { status: 500 });
   }
 }
